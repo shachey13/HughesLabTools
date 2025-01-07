@@ -1,3 +1,4 @@
+print("running")
 import os
 from HughesLabTools.DeviceManager import DeviceManager
 from HughesLabTools import gui
