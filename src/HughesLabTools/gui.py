@@ -70,8 +70,8 @@ class VmoToolsGui:
 
         dialog.setInsets(15, 10, 0)
         dialog.addMessage('Vessel Image Tools:')
-        vessel_checkbox_labels = ['Threshold Vessel Images', 'Measure Vessel Diameter']
-        dialog.addCheckboxGroup(2, 1, vessel_checkbox_labels, [False] * 2)
+        vessel_checkbox_labels = ['Threshold Vessel Images', 'Measure Vessel Diameter', 'Trace and export as .DXF']
+        dialog.addCheckboxGroup(3, 1, vessel_checkbox_labels, [False] * 3)
 
         dialog.setOKLabel('Next ...')
         dialog.showDialog()
@@ -97,6 +97,7 @@ class VmoToolsGui:
         self.options['meas_circ'] = dialog.getNextBoolean()
         self.options['threshold'] = dialog.getNextBoolean()
         self.options['meas_diam'] = dialog.getNextBoolean()
+        self.options['dxf_out'] = dialog.getNextBoolean()
 
     def _parse_color_merge_option(self, selected_option, radio_buttons):
         """
@@ -200,6 +201,8 @@ class VmoToolsGui:
             self._add_measure_diameter_options(dialog)
         if self.options['meas_circ']:
             self._add_circularity_options(dialog)
+        if self.options['dxf_out']:
+            self._add_dxf_options(dialog)
 
         self._add_file_options(dialog)
 
@@ -270,6 +273,20 @@ class VmoToolsGui:
         dialog.addNumericField("Min Size", 50, 0)
         dialog.addNumericField("Max Size", 10000, 0)
 
+    def _add_dxf_options(self, dialog):
+        """
+        Adds DXF options to the dialog.
+
+        Args:
+            dialog (GenericDialog): The dialog instance where the circularity options will be added.
+        """
+        dialog.setInsets(25, 20, 0)
+        dialog.addMessage('DXF Output Options:')
+        dialog.setInsets(5, 25, 0)
+        dialog.addCheckbox("Enable Smoothing", False)
+        dialog.addNumericField("Smoothing Value", 0, 0)
+
+
     def _add_file_options(self, dialog):
         """
         Adds file processing options to the dialog.
@@ -308,6 +325,9 @@ class VmoToolsGui:
             self.options['circ_bp'] = dialog.getNextNumber()
             self.options['circ_st'] = dialog.getNextNumber()
             self.options['circ_lt'] = dialog.getNextNumber()
+        if self.options['dxf_out']:
+            self.options['smooth_bool'] = dialog.getNextBoolean()
+            self.options['smooth_value'] = dialog.getNextNumber()
 
         # Only store operational options in self.options
         self.options['process_subdirectories'] = dialog.getNextBoolean()

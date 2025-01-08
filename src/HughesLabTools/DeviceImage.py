@@ -4,9 +4,9 @@ import os
 
 class DeviceImage(ImagePlus):
     def __init__(self, title=None, img=None, image_path=None, verbose=False):
+        self.verbose = verbose
         self.image_path = image_path
         self._loaded = False
-        self.verbose = verbose
         if title is not None and img is not None:
             ImagePlus.__init__(self, title, img)
         elif title is not None:

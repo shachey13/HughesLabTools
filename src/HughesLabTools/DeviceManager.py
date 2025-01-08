@@ -4,6 +4,8 @@ import re
 from java.lang import System
 from HughesLabTools.Device import Device
 from HughesLabTools.gui import VmoToolsGui, ImageTypeChangerGui
+from HughesLabTools.DeviceImage import  DeviceImage
+from HughesLabTools.VesselsImage import VesselImage
 
 class DeviceManager:
     def __init__(self, rootDir="", numTypes=1, typeNames=None, typeColors=None, verbose=False, options=None):
@@ -185,6 +187,40 @@ class DeviceManager:
             if self.options.get("merge"):
                     self.log("Merging images for device: {}".format(device.name))
                     device.merge_images(self.options.get('show_merged', False))
+
+            # Run Vessel options
+            if self.options.get('dxf_out'):
+                self.log("Running dxf for device: {}".format(device.name))
+
+                # Retrieve the vessel image paths
+                image_paths = device.get_image_paths()
+                vessel_paths = image_paths.get('Vessels', [])
+                self.log("Vessel paths: {}".format(vessel_paths))
+
+                if vessel_paths:
+                    img_path = vessel_paths[0]
+
+                    # Load the image using the device class
+                    device_image = device._load_image(img_path, verbose=self.verbose)
+
+                    if device_image is not None:
+                        # Get the title and ImageProcessor
+                        title = device_image.getTitle()
+                        #img_processor = device_image.getProcessor()
+                        #img = device_image.getImage()
+                        #self.log(type(img))
+
+
+                        # Create the VesselImage instance
+                        #vessel = VesselImage(title=title, img=img_processor)
+                        vessel = VesselImage(title=title, img=device_image)
+                        vessel.process_dxf(device_manager = self.options)
+
+                        self.log("VesselImage created successfully for device: {}".format(device.name))
+                    else:
+                        self.log("Failed to load image for device: {}".format(device.name), level="WARNING")
+                else:
+                    self.log("No vessel image paths found for device: {}".format(device.name), level="WARNING")
 
             # Garbage collection
             System.gc()
