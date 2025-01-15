@@ -2,6 +2,7 @@ from __future__ import print_function, division, absolute_import
 import os
 import re
 from java.lang import System
+from ij import IJ, ImagePlus
 from HughesLabTools.Device import Device
 from HughesLabTools.gui import VmoToolsGui, ImageTypeChangerGui
 from HughesLabTools.DeviceImage import  DeviceImage
@@ -188,39 +189,74 @@ class DeviceManager:
                     self.log("Merging images for device: {}".format(device.name))
                     device.merge_images(self.options.get('show_merged', False))
 
-            # Run Vessel options
-            if self.options.get('dxf_out'):
-                self.log("Running dxf for device: {}".format(device.name))
+            # Run Vessel Image processing
+            if self.options.get('threshold') or self.options.get('meas_diam') or self.options.get('dxf_out'):
+                self.log("Processing vessel images for device: {}".format(device.name))
+                vessel_image_paths = device.get_image_paths('Vessels')
 
-                # Retrieve the vessel image paths
-                image_paths = device.get_image_paths()
-                vessel_paths = image_paths.get('Vessels', [])
-                self.log("Vessel paths: {}".format(vessel_paths))
+                if vessel_image_paths:
+                    vessel_image_paths = vessel_image_paths if isinstance(vessel_image_paths, list) else [vessel_image_paths]
+                    for vessel_image_path in vessel_image_paths:
+                        self.log("Processing vessel image: {}".format(vessel_image_path))
+                        # Load the vessel image
+                        #vessel_image = device._load_image(vessel_image_path, verbose=self.verbose)
+                        #self.log(type(vessel_image))
+                        # Create a VesselImage instance
+                        #vessel = VesselImage(title=vessel_image.getTitle(), img=vessel_image.getProcessor(),
+                        #                     image_path = vessel_image_path, verbose = self.verbose)
+                        device_image = device._load_image(vessel_image_path, verbose=self.verbose)
+                        vessel = VesselImage(image_plus=device_image, verbose=self.verbose)
 
-                if vessel_paths:
-                    img_path = vessel_paths[0]
+                        # Threshold Vessel Images
+                        if self.options.get('threshold'):
+                            self.log("Thresholding vessel image: {}".format(vessel_image_path))
+                            thresholded_image = vessel.threshold_and_mask(self)
+                            if self.options.get('show_threshold', False):
+                                thresholded_image.show()
 
-                    # Load the image using the device class
-                    device_image = device._load_image(img_path, verbose=self.verbose)
+                        # Measure Vessel Diameter
+                        if self.options.get('meas_diam'):
+                            self.log("Measuring vessel diameter for image: {}".format(vessel_image_path))
+                            # Implement measurement logic here (if method is defined)
+                            # vessel.measure_diameter()
 
-                    if device_image is not None:
-                        # Get the title and ImageProcessor
-                        title = device_image.getTitle()
-                        #img_processor = device_image.getProcessor()
-                        #img = device_image.getImage()
-                        #self.log(type(img))
+                        if self.options.get('dxf_out'):
+                            self.log("Running dxf for device: {}".format(device.name))
+                            #vessel.process_dxf(device_manager = self.options)
+                            vessel.process_dxf(device_manager = self)
 
+            # Run Tumor Image processing
+            if self.options.get('segment') or self.options.get('meas_grey') or self.options.get('meas_circ'):
+                self.log("Processing tumor images for device: {}".format(device.name))
+                tumor_image_paths = device.get_image_paths('Tumor')
 
-                        # Create the VesselImage instance
-                        #vessel = VesselImage(title=title, img=img_processor)
-                        vessel = VesselImage(title=title, img=device_image)
-                        vessel.process_dxf(device_manager = self.options)
+                if tumor_image_paths:
+                    tumor_image_paths = tumor_image_paths if isinstance(tumor_image_paths, list) else [tumor_image_paths]
+                    for tumor_image_path in tumor_image_paths:
+                        self.log("Processing tumor image: {}".format(tumor_image_path))
+                        # Load the tumor image
+                        tumor_image = device._load_image(tumor_image_path, verbose=self.verbose)
+                        # Create a TumorImage instance
+                        tumor = TumorImage(title=tumor_image.getTitle(), img=tumor_image.getProcessor())
 
-                        self.log("VesselImage created successfully for device: {}".format(device.name))
-                    else:
-                        self.log("Failed to load image for device: {}".format(device.name), level="WARNING")
-                else:
-                    self.log("No vessel image paths found for device: {}".format(device.name), level="WARNING")
+                        # Segment Tumor Images
+                        if self.options.get('segment'):
+                            self.log("Segmenting tumor image: {}".format(tumor_image_path))
+                            segmented_image = tumor.segment_tumor()
+                            if self.options.get('show_segmented', False):
+                                segmented_image.show()
+
+                        # Measure Tumor Grey Level
+                        if self.options.get('meas_grey'):
+                            self.log("Measuring tumor grey level for image: {}".format(tumor_image_path))
+                            tumor.measure_tumor_gray()
+
+                        # Measure Tumor Circularity
+                        if self.options.get('meas_circ'):
+                            self.log("Measuring tumor circularity for image: {}".format(tumor_image_path))
+                            # Implement measurement logic here (if method is defined)
+                            # tumor.measure_circularity()
+
 
             # Garbage collection
             System.gc()

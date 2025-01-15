@@ -41,6 +41,18 @@ class DeviceImage(ImagePlus):
                 img = IJ.openImage(self.image_path)
                 if img:
                     self.setProcessor(img.getProcessor())
+                    self.setTitle(img.getTitle())
+
+                    # Set FileInfo using setFileInfo()
+                    if img.getFileInfo() is not None:
+                        self.setFileInfo(img.getFileInfo())
+                    else:
+                        from ij.io import FileInfo
+                        fi = FileInfo()
+                        fi.fileName = os.path.basename(self.image_path)
+                        fi.directory = os.path.dirname(self.image_path) + os.sep  # Ensure directory ends with separator
+                        self.setFileInfo(fi)
+
                     self._loaded = True
                     self.log("INFO: Loaded image successfully from path: {}".format(self.image_path))
                 else:

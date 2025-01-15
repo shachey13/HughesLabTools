@@ -1,4 +1,4 @@
-from ij import IJ, Prefs
+from ij import IJ, Prefs, ImagePlus
 import os
 from os.path import join, splitext
 from java.lang import Double
@@ -8,14 +8,37 @@ from ij.plugin.filter import ParticleAnalyzer
 from ij.gui import Roi
 from HughesLabTools.DeviceImage import DeviceImage
 
+# class VesselImage(DeviceImage):
+#     def __init__(self, title=None, img=None, image_path=None, verbose=False):
+#         super(VesselImage, self).__init__(title=title, img=img, image_path=image_path, verbose=verbose)
 class VesselImage(DeviceImage):
-    def __init__(self, title=None, img=None):
-        if title is not None and img is not None:
-            super(VesselImage, self).__init__(title, img)
-        elif title is not None:
-            super(VesselImage, self).__init__(title)
+    def __init__(self, image_plus=None, image_path=None, verbose=False):
+        self.verbose = verbose
+
+        if image_plus is not None:
+            # Initialize from existing ImagePlus or DeviceImage
+            if not isinstance(image_plus, ImagePlus):
+                raise TypeError("image_plus must be an instance of ImagePlus or its subclass")
+
+            # Copy attributes from the existing image
+            self.setProcessor(image_plus.getProcessor())
+            self.setTitle(image_plus.getTitle())
+            self._loaded = True  # Since we have the image data
+
+            # Set image_path if available
+            if hasattr(image_plus, 'image_path') and image_plus.image_path:
+                self.image_path = image_plus.image_path
+            else:
+                self.image_path = image_path  # Use the provided image_path if any
+
+            # Copy FileInfo if available
+            if image_plus.getOriginalFileInfo() is not None:
+                self.setFileInfo(image_plus.getOriginalFileInfo())
+
+            self.log("Initialized VesselImage from existing ImagePlus.", level="INFO")
         else:
-            super(VesselImage, self).__init__()
+            # Initialize using the superclass constructor
+            super(VesselImage, self).__init__(title=None, img=None, image_path=image_path, verbose=verbose)
 
     def threshold_and_mask(self, device_manager):
         """
@@ -36,11 +59,25 @@ class VesselImage(DeviceImage):
         IJ.run(imp2, 'Convert to Mask', '')
 
         # Save the thresholded image
-        output_dir = join(self.getOriginalFileInfo().directory, 'thresholded')
+        file_info = self.getFileInfo()
+        self.log(file_info)
+        self.log(self.image_path)
+        if file_info is not None and file_info.directory:
+            output_dir = join(file_info.directory, 'thresholded')
+            self.log("logic 1")
+            self.log(output_dir)
+        elif self.image_path is not None:
+            output_dir = join(os.path.dirname(self.image_path), 'thresholded')
+            self.log("logic 2")
+            self.log(output_dir)
+        else:
+            self.log("WARNING: Could not determine output directory; using current working directory.")
+            output_dir = os.getcwd()
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         output_path = join(output_dir, splitext(self.getTitle())[0] + '_thresholded.jpg')
-        self.save(output_path)
+        IJ.save(imp2, output_path)
+        #self.save(output_path)
 
         # Verbose logging
         if device_manager.verbose:
@@ -59,19 +96,25 @@ class VesselImage(DeviceImage):
         :param smooth_value: Relative proportion for Shape Smoothing Plugin
         Saves each image as a .dxf file
         """
-        # convert ip to imp
 
-        if self.imp.getType() != IJ.GRAY8:
-            IJ.run(self.imp, "8-bit", "")
+        # Duplicate the image
+        imp2 = self.duplicate()
+
+        # Set the title of the duplicated image
+        imp2.setTitle(splitext(self.getTitle())[0] + '_dxf')
+
+        # convert ip to imp
+        if imp2.getType() != ImagePlus.GRAY8:
+            IJ.run(imp2, "8-bit", "")
 
         if device_manager.options.get('smooth_bool'):
             self.smooth_image_function(device_manager.options.get('smooth_value'))
 
-        ip = self.imp.getProcessor()
+        ip = imp2.getProcessor()
         width = ip.getWidth() + 10
         height = ip.getHeight() + 10
         expanded_ip = CanvasResizer().expandImage(ip, width, height, 5, 5)
-        expanded_imp = self.imp.createImagePlus()
+        expanded_imp = imp2.createImagePlus()
         expanded_imp.setProcessor(expanded_ip)
         IJ.run(expanded_imp, "Make Binary", "")
         IJ.run(expanded_imp, "Outline", "")
