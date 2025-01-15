@@ -5,6 +5,7 @@ from java.lang import Double
 from ij.plugin.frame import RoiManager
 from ij.plugin import CanvasResizer
 from ij.plugin.filter import ParticleAnalyzer
+from ij.measure import ResultsTable
 from ij.gui import Roi
 from HughesLabTools.DeviceImage import DeviceImage
 
@@ -83,16 +84,10 @@ class VesselImage(DeviceImage):
         :return: file_path used for saving image
         """
         file_info = self.getFileInfo()
-        self.log(file_info)
-        self.log(self.image_path)
         if file_info is not None and file_info.directory:
             output_dir = join(file_info.directory, newDir)
-            self.log("logic 1")
-            self.log(output_dir)
         elif self.image_path is not None:
             output_dir = join(os.path.dirname(self.image_path), newDir)
-            self.log("logic 2")
-            self.log(output_dir)
         else:
             self.log("WARNING: Could not determine output directory; using current working directory.")
             output_dir = os.getcwd()
@@ -133,16 +128,28 @@ class VesselImage(DeviceImage):
         IJ.run(expanded_imp, "Make Binary", "")
         IJ.run(expanded_imp, "Outline", "")
 
-        options = ParticleAnalyzer.SHOW_OUTLINES | ParticleAnalyzer.ADD_TO_MANAGER
-        pa = ParticleAnalyzer(options, 0, None, 0, Double.POSITIVE_INFINITY)
+        # create an invisible instance of RoiManager
+        rm = RoiManager(False)
+
+        # set partcile analyzer
+        options = ParticleAnalyzer.SHOW_NONE
+
+        # Create the ParticleAnalyzer without the RoiManager
+        measurements = 0  # No measurements needed
+        rt = ResultsTable()  # You can use this to store measurement results if needed
+        minSize = 0
+        maxSize = Double.POSITIVE_INFINITY
+        pa = ParticleAnalyzer(options, measurements, rt, minSize, maxSize)
+
+        # Assign your RoiManager to the ParticleAnalyzer
+        pa.setRoiManager(rm)
+        # run particle analyzer
         pa.analyze(expanded_imp)
 
-        rm = RoiManager.getInstance()
-        if rm is None:
-            rm = RoiManager()
-
         num_rois = rm.getCount()
-        output_dxf_path = join(self.getOriginalFileInfo().directory, splitext(self.getTitle())[0] + '.dxf')
+        print(num_rois)
+        output_dir = self.output_path('dxf')
+        output_dxf_path = join(output_dir, splitext(self.getTitle())[0] + '.dxf')
         print(output_dxf_path)
         fid = self.dxf_open(output_dxf_path)
 
@@ -157,6 +164,7 @@ class VesselImage(DeviceImage):
         expanded_imp.changes = False
         expanded_imp.close()
         rm.reset()
+        rm.close() # close RoiManager instance
 
     def smooth_image_function(self, relative_proportion, absolute_number=2):
         IJ.run(self.imp, "Shape Smoothing",
