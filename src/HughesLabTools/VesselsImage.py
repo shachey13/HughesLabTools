@@ -58,23 +58,10 @@ class VesselImage(DeviceImage):
         Prefs.blackBackground = True
         IJ.run(imp2, 'Convert to Mask', '')
 
-        # Save the thresholded image
-        file_info = self.getFileInfo()
-        self.log(file_info)
-        self.log(self.image_path)
-        if file_info is not None and file_info.directory:
-            output_dir = join(file_info.directory, 'thresholded')
-            self.log("logic 1")
-            self.log(output_dir)
-        elif self.image_path is not None:
-            output_dir = join(os.path.dirname(self.image_path), 'thresholded')
-            self.log("logic 2")
-            self.log(output_dir)
-        else:
-            self.log("WARNING: Could not determine output directory; using current working directory.")
-            output_dir = os.getcwd()
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        # create output dir
+        output_dir = self.output_path('thresholded')
+
+        # save file
         output_path = join(output_dir, splitext(self.getTitle())[0] + '_thresholded.jpg')
         IJ.save(imp2, output_path)
         #self.save(output_path)
@@ -88,6 +75,33 @@ class VesselImage(DeviceImage):
             imp2.show()
 
         return imp2
+
+    def output_path(self, newDir):
+        """
+        Check to see if the ImagePlus has a file path. Additionally creates a new directory for saving
+        files to that path
+        :return: file_path used for saving image
+        """
+        file_info = self.getFileInfo()
+        self.log(file_info)
+        self.log(self.image_path)
+        if file_info is not None and file_info.directory:
+            output_dir = join(file_info.directory, newDir)
+            self.log("logic 1")
+            self.log(output_dir)
+        elif self.image_path is not None:
+            output_dir = join(os.path.dirname(self.image_path), newDir)
+            self.log("logic 2")
+            self.log(output_dir)
+        else:
+            self.log("WARNING: Could not determine output directory; using current working directory.")
+            output_dir = os.getcwd()
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        return output_dir # return output directory
+
 
     def process_dxf(self,  device_manager):
         """
