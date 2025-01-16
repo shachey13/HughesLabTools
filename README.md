@@ -139,6 +139,47 @@ If you encounter any problems, have feature requests, or want to track todos, pl
 
 Fork the repository, implement your features or fixes, and submit a pull request. Ensure that your code is well-documented and thoroughly tested.
 
+## Dependencies
+
+1. **Shape Smoothing Plugin** for ImageJ/Fiji:
+   - Add new methods in the relevant image class (e.g., `TumorImage` or `VesselImage`).
+   - Ensure the new methods are integrated into the image processing workflow.
+   - **Download Link:** [Shape Smoothing Plugin](https://imagej.net/plugins/shape-smoothing)
+   - **Description:** The Shape Smoothing plugin performs Fourier smoothing on binary images to reduce the number of vertices and smooth object boundaries.
+
+## Installation
+
+### Shape Smoothing Plugin
+
+The **Shape Smoothing** plugin is required for the shape smoothing functionality in this project. Please follow the steps below to download and install the plugin:
+
+1. **Download the Shape Smoothing Plugin:**
+
+   - Visit the [Shape Smoothing plugin page](https://imagej.net/plugins/shape-smoothing).
+   - Download the latest version of the plugin, typically provided as a `.jar` or `.class` file.
+
+2. **Install the Plugin in ImageJ/Fiji:**
+
+   - Locate your ImageJ or Fiji installation directory.
+   - Find the `plugins` folder within the installation directory.
+     - For **ImageJ**: This may be in `C:\ImageJ\plugins` (Windows) or `/Applications/ImageJ/plugins` (macOS).
+     - For **Fiji**: This may be in `C:\Fiji.app\plugins` (Windows) or `/Applications/Fiji.app/plugins` (macOS).
+   - Copy the downloaded plugin file (`Shape_Smoothing.jar` or `Shape_Smoothing.class`) into the `plugins` folder.
+   - **Optional:** You can create a subfolder within `plugins` (e.g., `plugins/ShapeTools`) and place the plugin there for better organization.
+
+3. **Restart ImageJ/Fiji:**
+
+   - Close any running instances of ImageJ or Fiji.
+   - Launch ImageJ or Fiji again to load the new plugin.
+
+4. **Verify the Plugin Installation:**
+
+   - In ImageJ/Fiji, go to `Plugins` in the menu bar.
+   - Look for `Shape Smoothing` in the list. If it's in a subfolder, navigate to the appropriate submenu.
+   - If the plugin appears in the menu, it's installed correctly.
+
+**Note:** Ensure you have the latest version of ImageJ or Fiji for compatibility.
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see the LICENSE file for details.
