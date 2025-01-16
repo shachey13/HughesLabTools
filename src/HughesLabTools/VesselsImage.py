@@ -1,4 +1,4 @@
-from ij import IJ, Prefs, ImagePlus
+from ij import IJ, Prefs, ImagePlus, Menus
 import os
 from os.path import join, splitext
 from java.lang import Double
@@ -117,7 +117,7 @@ class VesselImage(DeviceImage):
             IJ.run(imp2, "8-bit", "")
 
         if device_manager.options.get('smooth_bool'):
-            self.smooth_image_function(device_manager.options.get('smooth_value'))
+            imp2 = self.smooth_image_function(imp2, device_manager.options.get('smooth_value'))
 
         ip = imp2.getProcessor()
         width = ip.getWidth() + 10
@@ -147,8 +147,7 @@ class VesselImage(DeviceImage):
         pa.analyze(expanded_imp)
 
         num_rois = rm.getCount()
-        print(num_rois)
-        output_dir = self.output_path('dxf')
+        output_dir = self.output_path('dxf_smoothed')
         output_dxf_path = join(output_dir, splitext(self.getTitle())[0] + '.dxf')
         print(output_dxf_path)
         fid = self.dxf_open(output_dxf_path)
@@ -166,9 +165,41 @@ class VesselImage(DeviceImage):
         rm.reset()
         rm.close() # close RoiManager instance
 
-    def smooth_image_function(self, relative_proportion, absolute_number=2):
-        IJ.run(self.imp, "Shape Smoothing",
-               "relative_proportion_fds=%s absolute_number_fds=%s keep=[Relative_proportion of FDs]" % (relative_proportion, absolute_number))
+
+    #def smooth_image_function(self, relative_proportion, absolute_number=2):
+    #    IJ.run(self.imp, "Shape Smoothing",
+    #           "relative_proportion_fds=%s absolute_number_fds=%s keep=[Relative_proportion of FDs]" % (relative_proportion, absolute_number))
+
+    def smooth_image_function(self, imp, relative_proportion, absolute_number=2):
+        """
+        Applies shape smoothing to the given image if the Shape Smoothing plugin is available and the image is binary.
+
+        Args:
+            imp (ImagePlus): The image to be smoothed.
+            relative_proportion (float): The relative proportion parameter for the plugin.
+            absolute_number (int, optional): The absolute number parameter for the plugin. Defaults to 2.
+
+        Returns:
+            ImagePlus: The smoothed image (modified imp).
+        """
+        # Check if the image is binary using imp.getProcessor().isBinary()
+        if not imp.getProcessor().isBinary():
+            IJ.log("WARNING: Image is not binary. Skipping shape smoothing.")
+            return imp  # Return the original image without modification
+
+        # Check if the "Shape Smoothing" plugin is available
+        commands = Menus.getCommands()
+        plugin_name = "Shape Smoothing"
+        if plugin_name in commands:
+            # Plugin is available; construct the options string and run the plugin
+            options = "relative_proportion_fds={} absolute_number_fds={} keep=[Relative_proportion of FDs]".format(relative_proportion, absolute_number)
+            IJ.run(imp, plugin_name, options)
+            return imp  # Return the modified image
+        else:
+            # Plugin is not available; output a warning and skip running the code
+            IJ.log("WARNING: Shape Smoothing plugin not found. Skipping smoothing step.")
+            return imp  # Return the original image without modification
+
 
     def dxf_open(self, fname):
         try:
