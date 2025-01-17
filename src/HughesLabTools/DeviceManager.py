@@ -214,6 +214,7 @@ class DeviceManager:
                         if self.options.get('meas_diam'):
                             self.log("Measuring vessel diameter for image: {}".format(vessel_image_path))
                             # Implement measurement logic here (if method is defined)
+                            vessel.perform_vessel_analysis(options = self.options)
                             # vessel.measure_diameter()
 
                         if self.options.get('dxf_out'):

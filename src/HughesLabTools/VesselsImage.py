@@ -660,7 +660,7 @@ class VesselImage(DeviceImage):
             for value in array:
                 f.write(str(value) + "\n")
 
-    def perform_vessel_analysis(self):
+    def perform_vessel_analysis(self, options):
         """
         Perform vessel analysis on the image and save results.
         """
@@ -675,11 +675,11 @@ class VesselImage(DeviceImage):
             os.makedirs(cleaned_folder)
 
         # Parameters (you may adjust these as needed)
-        hole_threshold = 50
-        area_threshold_vessels = 100
-        image_cleaning_threshold = 1
-        distance_threshold = 5
-        mean_threshold = 10
+        hole_threshold = options.get('hole_threshold', 50)
+        area_threshold_vessels = options.get('area_threshold_vessels', 100)
+        image_cleaning_threshold = options.get('image_cleaning_threshold', 1)
+        distance_threshold = options.get('distance_threshold', 5)
+        mean_threshold = options.get('mean_threshold', 10)
 
         # Prepare file names
         image_path = self.image_path if self.image_path else "unknown_image"

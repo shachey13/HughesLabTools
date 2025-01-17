@@ -257,6 +257,11 @@ class VmoToolsGui:
         dialog.setInsets(25, 20, 0)
         dialog.addMessage('Vessel Measurement Options:')
         dialog.setInsets(5, 25, 0)
+        dialog.addNumericField("Hole Threshold:", 50, 0)
+        dialog.addNumericField("Area Threshold Vessels:", 100, 0)
+        dialog.addNumericField("Image Cleaning Threshold:", 1, 0)
+        dialog.addNumericField("Distance Threshold:", 5, 0)
+        dialog.addNumericField("Mean Threshold:", 10, 0)
         dialog.addCheckbox('Show settings for each image', False)
 
     def _add_circularity_options(self, dialog):
@@ -320,6 +325,11 @@ class VmoToolsGui:
         if self.options['threshold']:
             self.options['show_threshold'] = dialog.getNextBoolean()
         if self.options['meas_diam']:
+            self.options['hole_threshold'] = dialog.getNextNumber()
+            self.options['area_threshold_vessels'] = dialog.getNextNumber()
+            self.options['image_cleaning_threshold'] = dialog.getNextNumber()
+            self.options['distance_threshold'] = dialog.getNextNumber()
+            self.options['mean_threshold'] = dialog.getNextNumber()
             self.options['vessel_settings'] = dialog.getNextBoolean()
         if self.options['meas_circ']:
             self.options['circ_bp'] = dialog.getNextNumber()
