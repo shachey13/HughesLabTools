@@ -13,7 +13,7 @@ import math
 from HughesLabTools.DeviceImage import DeviceImage
 
 # Ensure that the AnalyzeSkeleton_ plugin is available
-from sc.fiji.analyzeSkeleton import AnalyzeSkeleton_
+#from sc.fiji.analyzeSkeleton import AnalyzeSkeleton_
 
 class Point:
     def __init__(self, x, y, z=0):
@@ -393,9 +393,13 @@ class VesselImage(DeviceImage):
         """
         Process junction points in the skeleton image.
         """
-        analyzeSkeleton = AnalyzeSkeleton_()
-        analyzeSkeleton.setup("", self)
-        results = analyzeSkeleton.run(AnalyzeSkeleton_.NONE, False, False, None, True, False)
+        #analyzeSkeleton = AnalyzeSkeleton_()
+        #analyzeSkeleton.setup("", self)
+        #results = analyzeSkeleton.run(AnalyzeSkeleton_.NONE, False, False, None, True, False)
+
+        # Run the Analyze Skeleton plugin
+        IJ.run(self, "Analyze Skeleton (2D/3D)", "prune=None calculate")
+        results = ResultsTable.getResultsTable()
 
         branchNumber = results.getBranches()
         juncList = results.getListOfJunctionVoxels()
@@ -698,7 +702,7 @@ class VesselImage(DeviceImage):
         test_imp = expanded_imp.duplicate()
 
         expanded_imp = self.clean_image(image_cleaning_threshold)
-        cleaned_save_path = join(cleaned_folder, f"{base_filename}_cleaned.tif")
+        cleaned_save_path = join(cleaned_folder, splitext(self.getTitle())[0] + '_cleaned.tif')
         FileSaver(expanded_imp).saveAsTiff(cleaned_save_path)
 
         cleaned_imp = expanded_imp.duplicate()
@@ -725,14 +729,14 @@ class VesselImage(DeviceImage):
         if not os.path.exists(output_skeleton_dir):
             os.makedirs(output_skeleton_dir)
 
-        skeleton_save_path = join(output_skeleton_dir, f"{base_filename}_skeleton.tif")
+        skeleton_save_path = join(output_skeleton_dir,splitext(self.getTitle())[0] + '_skeleton.tif')
         FileSaver(expanded_imp).saveAsTiff(skeleton_save_path)
 
         output_summary_dir = self.output_path('summary')
         if not os.path.exists(output_summary_dir):
             os.makedirs(output_summary_dir)
 
-        skeleton_values_save_path = join(output_summary_dir, f"{base_filename}_skeleton_values.csv")
+        skeleton_values_save_path = join(output_summary_dir, splitext(self.getTitle())[0] + '_skeleton_values.csv')
         self.save_array_to_csv(skeleton_values, skeleton_values_save_path)
 
         summary_table_path = join(output_summary_dir, "quantification_summary.csv")
