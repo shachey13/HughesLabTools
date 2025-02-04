@@ -14,11 +14,34 @@ class DeviceImage(ImagePlus):
         else:
             ImagePlus.__init__(self)
 
+    #@classmethod
+    #def from_image_plus(cls, image_plus, verbose=False):
+    #    if not isinstance(image_plus, ImagePlus):
+    #        raise TypeError("Input must be an instance of ImagePlus.")
+    #    return cls(img=image_plus, verbose=verbose)
+
     @classmethod
     def from_image_plus(cls, image_plus, verbose=False):
         if not isinstance(image_plus, ImagePlus):
             raise TypeError("Input must be an instance of ImagePlus.")
-        return cls(img=image_plus, verbose=verbose)
+
+        instance = cls(title=image_plus.getTitle(), img=image_plus.getProcessor())
+        instance.verbose = verbose
+        instance.setCalibration(image_plus.getCalibration())
+
+        # set image_path if available
+        if hasattr(image_plus, 'image_path') and image_plus.image_path:
+            instance.image_path = image_plus.image_path
+        else:
+            instance.image_path = None
+
+        # Copy FileInfo if available
+        if image_plus.getOriginalFileInfo() is not None:
+            instance.setFileInfo(image_plus.getOriginalFileInfo())
+
+        instance._loaded = True
+
+        return instance
 
     def log(self, message, level="INFO"):
         if level == "WARNING":
