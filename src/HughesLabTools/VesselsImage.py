@@ -75,6 +75,7 @@ class VesselImage(DeviceImage):
         return output_dir # return output directory
 
 
+    # Set functionality for generating DXF images
     def process_dxf(self,  device_manager):
         """
         Create an AutoCAD DXF file that contains a trace of the image
@@ -82,70 +83,64 @@ class VesselImage(DeviceImage):
         :param smooth_value: Relative proportion for Shape Smoothing Plugin
         Saves each image as a .dxf file
         """
+        imp2 = self._prepare_image(device_manager)
+        expanded_imp = self._expand_image(imp2)
+        rm = self._analyze_particles(expanded_imp)
+        self._write_dxf_file(rm, device_manager)
+        self._cleanup(expanded_imp, rm)
 
-        # Duplicate the image
+    def _prepare_image(self, device_manager):
         imp2 = self.duplicate()
-
-        # Set the title of the duplicated image
         imp2.setTitle(splitext(self.getTitle())[0] + '_dxf')
-
-        # convert ip to imp
         if imp2.getType() != ImagePlus.GRAY8:
             IJ.run(imp2, "8-bit", "")
-
         if device_manager.options.get('smooth_bool'):
             imp2 = self.smooth_image_function(imp2, device_manager.options.get('smooth_value'))
+        return imp2
 
-        ip = imp2.getProcessor()
-        width = ip.getWidth() + 10
-        height = ip.getHeight() + 10
+    def _expand_image(self, device_manager):
+        ip = self.getProcessor()
+        width, height = ip.getWidth() + 10, ip.getHeight() + 10
         expanded_ip = CanvasResizer().expandImage(ip, width, height, 5, 5)
-        expanded_imp = imp2.createImagePlus()
+        expanded_imp = self.createImagePlus()
         expanded_imp.setProcessor(expanded_ip)
         IJ.run(expanded_imp, "Make Binary", "")
         IJ.run(expanded_imp, "Outline", "")
+        return expanded_imp
 
-        # create an invisible instance of RoiManager
+    def _analyze_particles(self, imp):
         rm = RoiManager(False)
-
-        # set partcile analyzer
         options = ParticleAnalyzer.SHOW_NONE
-
-        # Create the ParticleAnalyzer without the RoiManager
-        measurements = 0  # No measurements needed
-        rt = ResultsTable()  # You can use this to store measurement results if needed
-        minSize = 0
-        maxSize = Double.POSITIVE_INFINITY
+        measurements = 0
+        rt = ResultsTable()
+        minSize, maxSize = 0, Double.POSITIVE_INFINITY
         pa = ParticleAnalyzer(options, measurements, rt, minSize, maxSize)
-
-        # Assign your RoiManager to the ParticleAnalyzer
         pa.setRoiManager(rm)
-        # run particle analyzer
-        pa.analyze(expanded_imp)
+        pa.analyze(imp)
+        return rm
 
-        num_rois = rm.getCount()
-        output_dir = self.output_path('dxf_smoothed')
+    def _write_dxf_file(self, rm, device_manager):
+        if device_manager.options.get('smooth_bool'):
+            output_dir = self.output_path('dxf_smoothed')
+        else:
+            output_dir = self.output_path('dxf')
+
         output_dxf_path = join(output_dir, splitext(self.getTitle())[0] + '.dxf')
         print(output_dxf_path)
         fid = self.dxf_open(output_dxf_path)
-
-        for i in range(num_rois):
+        for i in range(rm.getCount()):
             roi = rm.getRoi(i)
             x_points = roi.getPolygon().xpoints
             y_points = roi.getPolygon().ypoints
             z_points = [0] * len(x_points)
             self.dxf_polyline(fid, x_points, y_points, z_points)
-
         self.dxf_close(fid)
+
+    def _cleanup(self, expanded_imp, rm):
         expanded_imp.changes = False
         expanded_imp.close()
         rm.reset()
-        rm.close() # close RoiManager instance
-
-
-    #def smooth_image_function(self, relative_proportion, absolute_number=2):
-    #    IJ.run(self.imp, "Shape Smoothing",
-    #           "relative_proportion_fds=%s absolute_number_fds=%s keep=[Relative_proportion of FDs]" % (relative_proportion, absolute_number))
+        rm.close()
 
     def smooth_image_function(self, imp, relative_proportion, absolute_number=2):
         """
