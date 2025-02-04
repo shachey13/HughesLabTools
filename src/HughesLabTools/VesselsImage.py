@@ -90,6 +90,7 @@ class VesselImage(DeviceImage):
         self._cleanup(expanded_imp, rm)
 
     def _prepare_image(self, device_manager):
+        """Prepare the image for DXF processing."""
         imp2 = self.duplicate()
         imp2.setTitle(splitext(self.getTitle())[0] + '_dxf')
         if imp2.getType() != ImagePlus.GRAY8:
@@ -99,6 +100,7 @@ class VesselImage(DeviceImage):
         return imp2
 
     def _expand_image(self, device_manager):
+        """Expand the image and apply binary and outline processing."""
         ip = self.getProcessor()
         width, height = ip.getWidth() + 10, ip.getHeight() + 10
         expanded_ip = CanvasResizer().expandImage(ip, width, height, 5, 5)
@@ -109,6 +111,7 @@ class VesselImage(DeviceImage):
         return expanded_imp
 
     def _analyze_particles(self, imp):
+        """Analyze particles in the image and return ROI manager."""
         rm = RoiManager(False)
         options = ParticleAnalyzer.SHOW_NONE
         measurements = 0
@@ -120,6 +123,7 @@ class VesselImage(DeviceImage):
         return rm
 
     def _write_dxf_file(self, rm, device_manager):
+        """Write DXF file based on ROI Manager data."""
         if device_manager.options.get('smooth_bool'):
             output_dir = self.output_path('dxf_smoothed')
         else:
@@ -137,6 +141,7 @@ class VesselImage(DeviceImage):
         self.dxf_close(fid)
 
     def _cleanup(self, expanded_imp, rm):
+        """Clean up resources after DXF processing."""
         expanded_imp.changes = False
         expanded_imp.close()
         rm.reset()
@@ -174,6 +179,7 @@ class VesselImage(DeviceImage):
 
 
     def dxf_open(self, fname):
+        """Open a DXF file for writing."""
         try:
             fid = open(fname, 'w')
             FID = {
@@ -193,6 +199,7 @@ class VesselImage(DeviceImage):
             raise e
 
     def dxf_close(self, FID):
+        """Close the DXF file."""
         try:
             FID['fid'].write('0\nENDSEC\n0\nEOF\n')
             FID['fid'].close()
@@ -202,6 +209,7 @@ class VesselImage(DeviceImage):
             raise e
 
     def dxf_polyline(self, FID, X, Y, Z):
+        """Write a polyline to the DXF file."""
         try:
             if FID['dump']:
                 FID['fid'].write('0\nPOLYLINE\n')
