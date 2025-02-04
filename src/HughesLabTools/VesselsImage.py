@@ -9,37 +9,14 @@ from ij.measure import ResultsTable
 from ij.gui import Roi
 from HughesLabTools.DeviceImage import DeviceImage
 
-# class VesselImage(DeviceImage):
-#     def __init__(self, title=None, img=None, image_path=None, verbose=False):
-#         super(VesselImage, self).__init__(title=title, img=img, image_path=image_path, verbose=verbose)
 class VesselImage(DeviceImage):
-    def __init__(self, image_plus=None, image_path=None, verbose=False):
-        self.verbose = verbose
-
-        if image_plus is not None:
-            # Initialize from existing ImagePlus or DeviceImage
-            if not isinstance(image_plus, ImagePlus):
-                raise TypeError("image_plus must be an instance of ImagePlus or its subclass")
-
-            # Copy attributes from the existing image
-            self.setProcessor(image_plus.getProcessor())
-            self.setTitle(image_plus.getTitle())
-            self._loaded = True  # Since we have the image data
-
-            # Set image_path if available
-            if hasattr(image_plus, 'image_path') and image_plus.image_path:
-                self.image_path = image_plus.image_path
-            else:
-                self.image_path = image_path  # Use the provided image_path if any
-
-            # Copy FileInfo if available
-            if image_plus.getOriginalFileInfo() is not None:
-                self.setFileInfo(image_plus.getOriginalFileInfo())
-
-            self.log("Initialized VesselImage from existing ImagePlus.", level="INFO")
+    def __init__(self, title=None, img=None):
+        if title is not None and img is not None:
+            super(VesselImage, self).__init__(title, img)
+        elif title is not None:
+            super(VesselImage, self).__init__(title)
         else:
-            # Initialize using the superclass constructor
-            super(VesselImage, self).__init__(title=None, img=None, image_path=image_path, verbose=verbose)
+            super(VesselImage, self).__init__()
 
     def threshold_and_mask(self, device_manager):
         """
