@@ -258,10 +258,10 @@ class VmoToolsGui:
         dialog.addMessage('Vessel Measurement Options:')
         dialog.setInsets(5, 25, 0)
         dialog.addNumericField("Hole Threshold:", 50, 0)
-        dialog.addNumericField("Area Threshold Vessels:", 100, 0)
-        dialog.addNumericField("Image Cleaning Threshold:", 1, 0)
-        dialog.addNumericField("Distance Threshold:", 5, 0)
-        dialog.addNumericField("Mean Threshold:", 10, 0)
+        dialog.addNumericField("Area Threshold Vessels:", 10, 0)
+        dialog.addNumericField("Image Cleaning Threshold:", 3, 0)
+        dialog.addNumericField("Distance Threshold:", 10, 0)
+        dialog.addNumericField("Mean Threshold:", 50, 0)
         dialog.addCheckbox('Show settings for each image', False)
 
     def _add_circularity_options(self, dialog):
