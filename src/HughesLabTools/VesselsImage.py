@@ -273,33 +273,33 @@ class VesselImage(DeviceImage):
         # duplicate and process the image
         expanded_imp = self._expand_and_fill(parameters)
         test_imp = expanded_imp.duplicate()
-        expanded_imp = self.clean_image(parameters['image_cleaning_threshold']) # fixing this right now
+        expanded_imp = self._clean_image(parameters['image_cleaning_threshold']) # fixing this right now
         cleaned_save_path = join(cleaned_folder, splitext(self.getTitle())[0] + '_cleaned.tif')
         FileSaver(expanded_imp).saveAsTiff(cleaned_save_path)
         cleaned_imp = expanded_imp.duplicate()
 
         # skeletonize and find branches
         IJ.run(expanded_imp, "Skeletonize", "")
-        rt_all, rt_unique, branchNumber = self.process_junction_points(distance_threshold=parameters['distance_threshold'])
-        expanded_imp = self.break_branches_and_prune(rt_all, parameters['mean_threshold'])
-        rt_all, rt_unique, branchNumber = self.process_junction_points(distance_threshold=parameters['distance_threshold'])
+        rt_all, rt_unique, branchNumber = self._process_junction_points(distance_threshold=parameters['distance_threshold'])
+        expanded_imp = self._break_branches_and_prune(rt_all, parameters['mean_threshold'])
+        rt_all, rt_unique, branchNumber = self._process_junction_points(distance_threshold=parameters['distance_threshold'])
 
         # measure diameters
         IJ.run(test_imp, "Distance Map", "")
-        output_imp, skeleton_values = self.skeleton_map(test_imp)
-        modified_imp, average_values = self.break_branches_and_analyze(output_imp, rt_all)
+        output_imp, skeleton_values = self._skeleton_map(test_imp)
+        modified_imp, average_values = self._break_branches_and_analyze(output_imp, rt_all)
 
         # compute area
-        resultsArea = self.area_and_perimeter()
+        resultsArea = self._area_and_perimeter()
 
         # save results
-        summary_table = self.create_summary_table(filename, branchNumber, average_values, skeleton_values, resultsArea)
+        summary_table = self._create_summary_table(filename, branchNumber, average_values, skeleton_values, resultsArea)
         output_skeleton_dir = self.output_path('skeleton')
         skeleton_save_path = join(output_skeleton_dir,splitext(self.getTitle())[0] + '_skeleton.tif')
         FileSaver(expanded_imp).saveAsTiff(skeleton_save_path)
         output_summary_dir = self.output_path('summary')
         skeleton_values_save_path = join(output_summary_dir, splitext(self.getTitle())[0] + '_skeleton_values.csv')
-        self.save_array_to_csv(skeleton_values, skeleton_values_save_path)
+        self._save_array_to_csv(skeleton_values, skeleton_values_save_path)
         summary_table_path = join(output_summary_dir, "quantification_summary.csv")
         summary_table.save(summary_table_path)
 
@@ -330,18 +330,18 @@ class VesselImage(DeviceImage):
 
     def _expand_and_fill(self, parameters):
         expanded_imp = self.duplicate()
-        expaned_imp = self.custom_binarize(200)
-        expanded_imp, _ = self.fill_holes_and_remove_small_regions(
+        expaned_imp = self._custom_binarize(200)
+        expanded_imp, _ = self._fill_holes_and_remove_small_regions(
             parameters['hole_threshold'],
             parameters['area_threshold_vessels']
         )
-        expanded_imp = self.custom_binarize(200)
-        expanded_imp = self.invert_and_fill_holes()
-        expanded_imp = self.custom_binarize(200)
+        expanded_imp = self._custom_binarize(200)
+        expanded_imp = self._invert_and_fill_holes()
+        expanded_imp = self._custom_binarize(200)
         return expanded_imp
 
 
-    def custom_binarize(self, threshold):
+    def _custom_binarize(self, threshold):
         """
         Apply custom binarization to the image using the provided threshold.
         """
@@ -360,7 +360,7 @@ class VesselImage(DeviceImage):
         self.updateAndDraw()
         return self
 
-    def clean_image(self, threshold):
+    def _clean_image(self, threshold):
         """
         Clean the image using distance map and threshold.
         """
@@ -373,7 +373,7 @@ class VesselImage(DeviceImage):
         IJ.run(self, "Convert to Mask", "")
         return self
 
-    def fill_holes_and_remove_small_regions(self, hole_threshold, area_threshold_vessel):
+    def _fill_holes_and_remove_small_regions(self, hole_threshold, area_threshold_vessel):
         """
         Fill holes in the image and remove small regions below the given thresholds.
         """
@@ -429,7 +429,7 @@ class VesselImage(DeviceImage):
 
         return self, hole_rois
 
-    def invert_and_fill_holes(self):
+    def _invert_and_fill_holes(self):
         """
         Invert the image and fill holes.
         """
@@ -443,34 +443,7 @@ class VesselImage(DeviceImage):
 
         return self
 
-    def distance(self, p1, p2):
-        """
-        Calculate Euclidean distance between two points.
-        """
-        return math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2)
-
-    def cluster_points(self, points, threshold):
-        """
-        Cluster points that are within the given distance threshold.
-        """
-        clusters = []
-        used = set()
-
-        for i, p1 in enumerate(points):
-            if i in used:
-                continue
-            cluster = [p1]
-            used.add(i)
-            for j, p2 in enumerate(points):
-                if j in used:
-                    continue
-                if self.distance(p1, p2) <= threshold:
-                    cluster.append(p2)
-                    used.add(j)
-            clusters.append(cluster)
-        return clusters
-
-    def process_junction_points(self, distance_threshold):
+    def _process_junction_points(self, distance_threshold):
         """
         Process junction points in the skeleton image.
         """
@@ -486,7 +459,7 @@ class VesselImage(DeviceImage):
             voxel_list = juncList.get(i)
             all_junction_points.append(voxel_list)
 
-        clusters = self.cluster_points(all_junction_points, threshold=distance_threshold)
+        clusters = self._cluster_points(all_junction_points, threshold=distance_threshold)
         unique_junction_points = [cluster[0] for cluster in clusters]
 
         rt_all = ResultsTable()
@@ -514,22 +487,34 @@ class VesselImage(DeviceImage):
 
         return rt_all, rt_unique, len(unique_junction_points)
 
-    def get_neighbours(self, point, ip):
+    def _distance(self, p1, p2):
         """
-        Get neighbouring pixels of a point in the image.
+        Calculate Euclidean distance between two points.
         """
-        x, y = point.x, point.y
-        width, height = ip.getWidth(), ip.getHeight()
-        neighbours = []
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx != 0 or dy != 0:
-                    nx, ny = x + dx, y + dy
-                    if 0 <= nx < width and 0 <= ny < height and ip.getPixel(nx, ny) == 255:
-                        neighbours.append(Point(nx, ny))
-        return neighbours
+        return math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2)
 
-    def break_branches_and_prune(self, rt_all, mean_threshold):
+    def _cluster_points(self, points, threshold):
+        """
+        Cluster points that are within the given distance threshold.
+        """
+        clusters = []
+        used = set()
+
+        for i, p1 in enumerate(points):
+            if i in used:
+                continue
+            cluster = [p1]
+            used.add(i)
+            for j, p2 in enumerate(points):
+                if j in used:
+                    continue
+                if self._distance(p1, p2) <= threshold:
+                    cluster.append(p2)
+                    used.add(j)
+            clusters.append(cluster)
+        return clusters
+
+    def _break_branches_and_prune(self, rt_all, mean_threshold):
         """
         Break branches in the skeleton and remove small segments based on mean threshold.
         """
@@ -580,8 +565,8 @@ class VesselImage(DeviceImage):
                 endY = segmentPts[-1].y
                 end_point = Point(int(endX), int(endY))
 
-                neighboursStart = self.get_neighbours(start_point, output_ip)
-                neighboursEnd = self.get_neighbours(end_point, output_ip)
+                neighboursStart = self._get_neighbours(start_point, output_ip)
+                neighboursEnd = self._get_neighbours(end_point, output_ip)
                 if (len(neighboursStart) == 1 or len(neighboursEnd) == 1):
                     for p in segmentPts:
                         modified_ip.putPixelValue(p.x, p.y, 0)
@@ -597,7 +582,22 @@ class VesselImage(DeviceImage):
 
         return modified_imp
 
-    def skeleton_map(self, cleaned_imp):
+    def _get_neighbours(self, point, ip):
+        """
+        Get neighbouring pixels of a point in the image.
+        """
+        x, y = point.x, point.y
+        width, height = ip.getWidth(), ip.getHeight()
+        neighbours = []
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx != 0 or dy != 0:
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < width and 0 <= ny < height and ip.getPixel(nx, ny) == 255:
+                        neighbours.append(Point(nx, ny))
+        return neighbours
+
+    def _skeleton_map(self, cleaned_imp):
         """
         Map the skeleton onto the image and extract skeleton values.
         """
@@ -626,7 +626,7 @@ class VesselImage(DeviceImage):
         output_imp = ImagePlus("Skeleton with Values", output_ip)
         return output_imp, skeleton_values
 
-    def break_branches_and_analyze(self, output_imp, rt_all):
+    def _break_branches_and_analyze(self, output_imp, rt_all):
         """
         Break branches and analyze average values.
         """
@@ -655,7 +655,7 @@ class VesselImage(DeviceImage):
 
         return modified_imp, average_values
 
-    def area_and_perimeter(self):
+    def _area_and_perimeter(self):
         """
         Calculate area and perimeter of the vessel and perivascular regions.
         """
@@ -698,7 +698,7 @@ class VesselImage(DeviceImage):
             "inverted_perimeter": inverted_perimeter
         }
 
-    def create_summary_table(self, filename, branchNumber, average_values, skeleton_values, resultsArea):
+    def _create_summary_table(self, filename, branchNumber, average_values, skeleton_values, resultsArea):
         """
         Create a summary table with the vessel analysis results.
         """
@@ -723,7 +723,7 @@ class VesselImage(DeviceImage):
 
         return self.summary_table
 
-    def save_array_to_csv(self, array, file_path):
+    def _save_array_to_csv(self, array, file_path):
         """
         Save an array to a CSV file.
         """
