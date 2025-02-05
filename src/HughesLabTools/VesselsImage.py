@@ -87,7 +87,7 @@ class VesselImage(DeviceImage):
         return output_dir # return output directory
 
 
-    # Set functionality for generating DXF images
+    ## Set functionality for generating DXF images
     def process_dxf(self,  device_manager):
         """
         Create an AutoCAD DXF file that contains a trace of the image
@@ -259,7 +259,88 @@ class VesselImage(DeviceImage):
         fid.write("0\nSEQEND\n8\n{layer}\n".format(layer=FID['layer']))
 
 
-    # Vessel Quantification Methods
+    ## Vessel Quantification Methods
+    def perform_vessel_analysis(self, options):
+        """
+        Perform vessel analysis on the image and save results.
+        """
+        # set output folders, get parametes, and set file names
+        output_folder = self.output_path('Vessel_Analysis')
+        cleaned_folder = self.output_path('Cleaned_Images')
+        parameters = self._get_analysis_parameters(options)
+        filename, base_filename = self._prepare_filenames()
+
+        # duplicate and process the image
+        expanded_imp = self._expand_and_fill(parameters)
+        test_imp = expanded_imp.duplicate()
+        expanded_imp = self.clean_image(parameters['image_cleaning_threshold']) # fixing this right now
+        cleaned_save_path = join(cleaned_folder, splitext(self.getTitle())[0] + '_cleaned.tif')
+        FileSaver(expanded_imp).saveAsTiff(cleaned_save_path)
+        cleaned_imp = expanded_imp.duplicate()
+
+        # skeletonize and find branches
+        IJ.run(expanded_imp, "Skeletonize", "")
+        rt_all, rt_unique, branchNumber = self.process_junction_points(distance_threshold=parameters['distance_threshold'])
+        expanded_imp = self.break_branches_and_prune(rt_all, parameters['mean_threshold'])
+        rt_all, rt_unique, branchNumber = self.process_junction_points(distance_threshold=parameters['distance_threshold'])
+
+        # measure diameters
+        IJ.run(test_imp, "Distance Map", "")
+        output_imp, skeleton_values = self.skeleton_map(test_imp)
+        modified_imp, average_values = self.break_branches_and_analyze(output_imp, rt_all)
+
+        # compute area
+        resultsArea = self.area_and_perimeter()
+
+        # save results
+        summary_table = self.create_summary_table(filename, branchNumber, average_values, skeleton_values, resultsArea)
+        output_skeleton_dir = self.output_path('skeleton')
+        skeleton_save_path = join(output_skeleton_dir,splitext(self.getTitle())[0] + '_skeleton.tif')
+        FileSaver(expanded_imp).saveAsTiff(skeleton_save_path)
+        output_summary_dir = self.output_path('summary')
+        skeleton_values_save_path = join(output_summary_dir, splitext(self.getTitle())[0] + '_skeleton_values.csv')
+        self.save_array_to_csv(skeleton_values, skeleton_values_save_path)
+        summary_table_path = join(output_summary_dir, "quantification_summary.csv")
+        summary_table.save(summary_table_path)
+
+        # Close ROI Manager
+        roi_manager = RoiManager(False)
+        if roi_manager:
+            roi_manager.reset()
+            roi_manager.close()
+
+        print("Done with vessel quantification")
+
+
+
+    def _get_analysis_parameters(self, options):
+        return {
+            'hole_threshold': options.get('hole_threshold', 50),
+            'area_threshold_vessels': options.get('area_threshold_vessels', 100),
+            'image_cleaning_threshold': options.get('image_cleaning_threshold', 1),
+            'distance_threshold': options.get('distance_threshold', 5),
+            'mean_threshold': options.get('mean_threshold', 10)
+        }
+
+    def _prepare_filenames(self):
+        image_path = self.image_path if self.image_path else "unknown_image"
+        filename = os.path.basename(image_path)
+        base_filename = os.path.splitext(filename)[0]
+        return filename, base_filename
+
+    def _expand_and_fill(self, parameters):
+        expanded_imp = self.duplicate()
+        expaned_imp = self.custom_binarize(200)
+        expanded_imp, _ = self.fill_holes_and_remove_small_regions(
+            parameters['hole_threshold'],
+            parameters['area_threshold_vessels']
+        )
+        expanded_imp = self.custom_binarize(200)
+        expanded_imp = self.invert_and_fill_holes()
+        expanded_imp = self.custom_binarize(200)
+        return expanded_imp
+
+
     def custom_binarize(self, threshold):
         """
         Apply custom binarization to the image using the provided threshold.
@@ -395,14 +476,7 @@ class VesselImage(DeviceImage):
         """
         analyzeSkeleton = AnalyzeSkeleton_()
         analyzeSkeleton.setup("", self)
-        #analyzeSkeleton.setShowResults(False)
         results = analyzeSkeleton.run(AnalyzeSkeleton_.NONE, False, False, None, True, False)
-
-        # Run the Analyze Skeleton plugin
-        #IJ.run(self, "Analyze Skeleton (2D/3D)", "prune=None calculate")
-        #results = ResultsTable.getResultsTable()
-        # check
-        #IJ.log(results.getColumnHeadings())
 
         branchNumber = results.getBranches()
         juncList = results.getListOfJunctionVoxels()
@@ -411,8 +485,6 @@ class VesselImage(DeviceImage):
         for i in range(juncList.size()):
             voxel_list = juncList.get(i)
             all_junction_points.append(voxel_list)
-            #for voxel in voxel_list:
-            #    all_junction_points.append(Point(voxel.x, voxel.y, voxel.z))
 
         clusters = self.cluster_points(all_junction_points, threshold=distance_threshold)
         unique_junction_points = [cluster[0] for cluster in clusters]
@@ -511,7 +583,6 @@ class VesselImage(DeviceImage):
                 neighboursStart = self.get_neighbours(start_point, output_ip)
                 neighboursEnd = self.get_neighbours(end_point, output_ip)
                 if (len(neighboursStart) == 1 or len(neighboursEnd) == 1):
-                    print(x, y, endX, endY)
                     for p in segmentPts:
                         modified_ip.putPixelValue(p.x, p.y, 0)
 
@@ -660,92 +731,3 @@ class VesselImage(DeviceImage):
             for value in array:
                 f.write(str(value) + "\n")
 
-    def perform_vessel_analysis(self, options):
-        """
-        Perform vessel analysis on the image and save results.
-        """
-        # Assume output folder is derived from image_path
-        output_folder = self.output_path('Vessel_Analysis')
-
-        # Set the output directory for cleaned images
-        cleaned_folder = self.output_path('Cleaned_Images')
-
-        # Create directories if they do not exist
-        if not os.path.exists(cleaned_folder):
-            os.makedirs(cleaned_folder)
-
-        # Parameters (you may adjust these as needed)
-        hole_threshold = options.get('hole_threshold', 50)
-        area_threshold_vessels = options.get('area_threshold_vessels', 100)
-        image_cleaning_threshold = options.get('image_cleaning_threshold', 1)
-        distance_threshold = options.get('distance_threshold', 5)
-        mean_threshold = options.get('mean_threshold', 10)
-
-        # Prepare file names
-        image_path = self.image_path if self.image_path else "unknown_image"
-        filename = os.path.basename(image_path)
-        base_filename = os.path.splitext(filename)[0]
-
-        # Duplicate and process the image
-        expanded_imp = self.duplicate()
-        expanded_imp = self.custom_binarize(200)
-
-        og_imp = expanded_imp.duplicate()
-        raw_imp = expanded_imp.duplicate()
-        raw_imp = self.clean_image(1)
-
-        expanded_imp, myRois = self.fill_holes_and_remove_small_regions(hole_threshold, area_threshold_vessels)
-        expanded_imp = self.custom_binarize(200)
-
-        expanded_imp = self.invert_and_fill_holes()
-        expanded_imp = self.custom_binarize(200)
-        test_imp = expanded_imp.duplicate()
-
-        expanded_imp = self.clean_image(image_cleaning_threshold)
-        cleaned_save_path = join(cleaned_folder, splitext(self.getTitle())[0] + '_cleaned.tif')
-        FileSaver(expanded_imp).saveAsTiff(cleaned_save_path)
-
-        cleaned_imp = expanded_imp.duplicate()
-
-        IJ.run(expanded_imp, "Skeletonize", "")
-
-        rt_all, rt_unique, branchNumber = self.process_junction_points(distance_threshold=distance_threshold)
-
-        expanded_imp = self.break_branches_and_prune(rt_all, mean_threshold)
-
-        rt_all, rt_unique, branchNumber = self.process_junction_points(distance_threshold=distance_threshold)
-
-        IJ.run(test_imp, "Distance Map", "")
-        output_imp, skeleton_values = self.skeleton_map(test_imp)
-
-        modified_imp, average_values = self.break_branches_and_analyze(output_imp, rt_all)
-
-        resultsArea = self.area_and_perimeter()
-
-        summary_table = self.create_summary_table(filename, branchNumber, average_values, skeleton_values, resultsArea)
-
-        # Save outputs
-        output_skeleton_dir = self.output_path('skeleton')
-        if not os.path.exists(output_skeleton_dir):
-            os.makedirs(output_skeleton_dir)
-
-        skeleton_save_path = join(output_skeleton_dir,splitext(self.getTitle())[0] + '_skeleton.tif')
-        FileSaver(expanded_imp).saveAsTiff(skeleton_save_path)
-
-        output_summary_dir = self.output_path('summary')
-        if not os.path.exists(output_summary_dir):
-            os.makedirs(output_summary_dir)
-
-        skeleton_values_save_path = join(output_summary_dir, splitext(self.getTitle())[0] + '_skeleton_values.csv')
-        self.save_array_to_csv(skeleton_values, skeleton_values_save_path)
-
-        summary_table_path = join(output_summary_dir, "quantification_summary.csv")
-        summary_table.save(summary_table_path)
-
-        # Close ROI Manager
-        roi_manager = RoiManager(False)
-        if roi_manager:
-            roi_manager.reset()
-            roi_manager.close()
-
-        print("Done with vessel quantification")
