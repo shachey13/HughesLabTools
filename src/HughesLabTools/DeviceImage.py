@@ -1,4 +1,6 @@
 from ij import IJ, ImagePlus, Prefs
+from ij.plugin.filter import Binary
+from ij.process import FloatProcessor
 import os
 
 
@@ -120,6 +122,69 @@ class DeviceImage(ImagePlus):
         Prefs.blackBackground = black_background
         IJ.run(thresholded_image, 'Convert to Mask', '')
         return thresholded_image
+
+    def segment_image(self, selected_file, output_folder):
+        segment_folder = os.path.join(output_folder, "Segmented_Images")
+        self._create_directory_if_needed(segment_folder)
+
+        IJ.log("Starting segmentation of image: {}".format(self.getTitle()))
+
+        segmenter = WekaSegmentation(self)
+        segmenter.loadClassifier(selected_file)
+        result = segmenter.applyClassifier(self)
+
+        result_ip = result.getProcessor() if isinstance(result, ImagePlus) else FloatProcessor(result)
+        result_imp = ImagePlus("Result", result_ip)
+
+        result_ip.setThreshold(1, 255, ImageProcessor.NO_LUT_UPDATE)
+        binary = Binary()
+        binary.setup("make binary", result_imp)
+        binary.run(result_ip)
+
+        result_imp = self._convert_and_invert_binary_255(result_ip)
+        segmented_image_path = os.path.join(segment_folder, "{}-Segment.tif".format(os.path.splitext(self.getTitle())[0]))
+        IJ.saveAs(result_imp, "Tiff", segmented_image_path)
+
+        result_imp.close()
+
+        IJ.log("Segmentation completed for image: {}".format(self.getTitle()))
+
+        return segmented_image_path
+
+    def _convert_and_invert_binary_255(self, result_ip):
+        result_imp = ImagePlus("Result", result_ip.duplicate())
+        result_processor = result_imp.getProcessor()
+        for y in range(result_processor.getHeight()):
+            for x in range(result_processor.getWidth()):
+                if result_processor.getPixel(x, y) > 0:
+                    result_processor.set(x, y, 0)
+                else:
+                    result_processor.set(x, y, 255)
+        result_imp.setProcessor(result_processor)
+        return result_imp
+
+    def _create_directory_if_needed(self, directory):
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+    @classmethod
+    def prepare_for_segmentation(cls):
+        """
+        Check for trainableSegmentation availability and import it if available.
+        This method can be called once before running multiple segmentations.
+        """
+        if cls._trainable_segmentation_available is None:
+            try:
+                global WekaSegmentation
+                from trainableSegmentation import WekaSegmentation
+                cls._trainable_segmentation_available = True
+                IJ.log("trainableSegmentation module is available and imported successfully.")
+            except ImportError:
+                IJ.log("Error: trainableSegmentation module is not installed.")
+                IJ.log("Please install it via the Fiji updater or manually add it to the plugins folder.")
+                cls._trainable_segmentation_available = False
+
+        return cls._trainable_segmentation_available
 
     def save(self, file_path):
         self._lazy_load()
