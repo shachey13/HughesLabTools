@@ -4,7 +4,7 @@ from os.path import join, splitext
 from java.lang import Double
 from ij.plugin.frame import RoiManager
 from ij.plugin import CanvasResizer
-from ij.plugin.filter import ParticleAnalyzer
+from ij.plugin.filter import ParticleAnalyzer, Analyzer
 from ij.measure import ResultsTable, Measurements
 from ij.gui import Roi
 from ij.process import ImageProcessor, FloatProcessor
@@ -13,7 +13,7 @@ import math
 from HughesLabTools.DeviceImage import DeviceImage
 
 # Ensure that the AnalyzeSkeleton_ plugin is available
-#from sc.fiji.analyzeSkeleton import AnalyzeSkeleton_
+from sc.fiji.analyzeSkeleton import AnalyzeSkeleton_
 
 class Point:
     def __init__(self, x, y, z=0):
@@ -393,13 +393,15 @@ class VesselImage(DeviceImage):
         """
         Process junction points in the skeleton image.
         """
-        #analyzeSkeleton = AnalyzeSkeleton_()
-        #analyzeSkeleton.setup("", self)
-        #results = analyzeSkeleton.run(AnalyzeSkeleton_.NONE, False, False, None, True, False)
+        analyzeSkeleton = AnalyzeSkeleton_()
+        analyzeSkeleton.setup("", self)
+        results = analyzeSkeleton.run(AnalyzeSkeleton_.NONE, False, False, None, True, False)
 
         # Run the Analyze Skeleton plugin
-        IJ.run(self, "Analyze Skeleton (2D/3D)", "prune=None calculate")
-        results = ResultsTable.getResultsTable()
+        #IJ.run(self, "Analyze Skeleton (2D/3D)", "prune=None calculate")
+        #results = ResultsTable.getResultsTable()
+        # check
+        #IJ.log(results.getColumnHeadings())
 
         branchNumber = results.getBranches()
         juncList = results.getListOfJunctionVoxels()
@@ -407,8 +409,9 @@ class VesselImage(DeviceImage):
         all_junction_points = []
         for i in range(juncList.size()):
             voxel_list = juncList.get(i)
-            for voxel in voxel_list:
-                all_junction_points.append(Point(voxel.x, voxel.y, voxel.z))
+            all_junction_points.append(voxel_list)
+            #for voxel in voxel_list:
+            #    all_junction_points.append(Point(voxel.x, voxel.y, voxel.z))
 
         clusters = self.cluster_points(all_junction_points, threshold=distance_threshold)
         unique_junction_points = [cluster[0] for cluster in clusters]
