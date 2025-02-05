@@ -190,9 +190,13 @@ class DeviceManager:
                     device.merge_images(self.options.get('show_merged', False))
 
             # Run Vessel Image processing
-            if self.options.get('threshold') or self.options.get('meas_diam') or self.options.get('dxf_out'):
+            if self.options.get('threshold') or self.options.get('vessel_weka') or  self.options.get('meas_diam') or self.options.get('dxf_out'):
                 self.log("Processing vessel images for device: {}".format(device.name))
                 vessel_image_paths = device.get_image_paths('Vessels')
+
+                if self.options.get('vessel_weka'):
+                    device_image = device._load_image(vessel_image_paths[0])
+                    device_image.prepare_for_segmentation()
 
                 if vessel_image_paths:
                     vessel_image_paths = vessel_image_paths if isinstance(vessel_image_paths, list) else [vessel_image_paths]
@@ -209,6 +213,11 @@ class DeviceManager:
                             thresholded_image = vessel.threshold_and_mask(self)
                             if self.options.get('show_threshold', False):
                                 thresholded_image.show()
+
+                        # Segment the image
+                        if self.options.get('vessel_weka'):
+                            self.log("Segmenting vessel image: {}".format(vessel_image_path))
+                            device_image.segment_image(self.options.get('vessel_weka_classifier'), 'Vessel_Segmented')
 
                         # Measure Vessel Diameter
                         if self.options.get('meas_diam'):

@@ -1,10 +1,13 @@
 from ij import IJ, ImagePlus, Prefs
 from ij.plugin.filter import Binary
-from ij.process import FloatProcessor
+from ij.process import FloatProcessor, ImageProcessor
 import os
+from os.path import join, splitext
 
 
 class DeviceImage(ImagePlus):
+    _trainable_segmentation_available = None
+
     def __init__(self, title=None, img=None, image_path=None, verbose=False):
         self.verbose = verbose
         self.image_path = image_path
@@ -124,32 +127,59 @@ class DeviceImage(ImagePlus):
         return thresholded_image
 
     def segment_image(self, selected_file, output_folder):
-        segment_folder = os.path.join(output_folder, "Segmented_Images")
+        segment_folder = self._output_path(output_folder)
+        print(segment_folder)
         self._create_directory_if_needed(segment_folder)
 
         IJ.log("Starting segmentation of image: {}".format(self.getTitle()))
 
-        segmenter = WekaSegmentation(self)
-        segmenter.loadClassifier(selected_file)
-        result = segmenter.applyClassifier(self)
+        # convert image to grayscale if necessary and run classifier
+        grayscale_image = self._convert_to_grayscale()
 
+        # Load the classifier
+        segmenter = WekaSegmentation(grayscale_image)
+        segmenter.loadClassifier(selected_file)
+        result = segmenter.applyClassifier(grayscale_image)
+
+        # generate image from result
         result_ip = result.getProcessor() if isinstance(result, ImagePlus) else FloatProcessor(result)
         result_imp = ImagePlus("Result", result_ip)
 
+        # binarize result
         result_ip.setThreshold(1, 255, ImageProcessor.NO_LUT_UPDATE)
         binary = Binary()
         binary.setup("make binary", result_imp)
         binary.run(result_ip)
 
+        # invert result and save
         result_imp = self._convert_and_invert_binary_255(result_ip)
         segmented_image_path = os.path.join(segment_folder, "{}-Segment.tif".format(os.path.splitext(self.getTitle())[0]))
         IJ.saveAs(result_imp, "Tiff", segmented_image_path)
-
+        print(segmented_image_path)
         result_imp.close()
 
         IJ.log("Segmentation completed for image: {}".format(self.getTitle()))
 
-        return segmented_image_path
+
+    def _output_path(self, newDir):
+        """
+        Check to see if the ImagePlus has a file path. Additionally creates a new directory for saving
+        files to that path
+        :return: file_path used for saving image
+        """
+        file_info = self.getFileInfo()
+        if file_info is not None and file_info.directory:
+            output_dir = join(file_info.directory, newDir)
+        elif self.image_path is not None:
+            output_dir = join(os.path.dirname(self.image_path), newDir)
+        else:
+            self.log("WARNING: Could not determine output directory; using current working directory.")
+            output_dir = os.getcwd()
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        return output_dir # return output directory
 
     def _convert_and_invert_binary_255(self, result_ip):
         result_imp = ImagePlus("Result", result_ip.duplicate())
@@ -166,6 +196,19 @@ class DeviceImage(ImagePlus):
     def _create_directory_if_needed(self, directory):
         if not os.path.exists(directory):
             os.makedirs(directory)
+
+    def _get_image_type(self):
+        processor = self.getProcessor()
+        if processor.getBitDepth() == 24:
+            return "color"
+        else:
+            return "grayscale"
+
+    def _convert_to_grayscale(self):
+        if self._get_image_type() == "color":
+            IJ.run(self, "8-bit", "")
+            return DeviceImage.from_image_plus(self)
+        return self
 
     @classmethod
     def prepare_for_segmentation(cls):
