@@ -1,5 +1,6 @@
 from __future__ import print_function, division, absolute_import
 from ij import IJ, gui
+from ij.io import OpenDialog
 
 class VmoToolsGui:
     """
@@ -40,6 +41,28 @@ class VmoToolsGui:
         if not self._collect_root_directory():
             return None  # Stop if the user cancels the directory selection
 
+        # Add this new step for Weka file selection before root directory selection
+        if self.options.get('tumor_weka', False) and self.options.get('use_weka_segmentation', False):
+            od = OpenDialog("Select Weka classifier file for tumor segmentation", None)
+            weka_file = od.getPath()
+            if weka_file:
+                self.options['tumor_weka_classifier'] = weka_file
+                IJ.log("Weka classifier file selected: " + weka_file)
+            else:
+                IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
+                self.options['use_weka_segmentation'] = False
+
+        # Add this new step for Weka file selection before root directory selection
+        if self.options.get('vessel_weka', False) and self.options.get('use_vessel_weka_segmentation', False):
+            od = OpenDialog("Select Weka classifier file for Vessel segmentation", None)
+            weka_file = od.getPath()
+            if weka_file:
+                self.options['vessel_weka_classifier'] = weka_file
+                IJ.log("Vessel Weka classifier file selected: " + weka_file)
+            else:
+                IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
+                self.options['use_vessel_weka_segmentation'] = False
+
         if device_manager:
             # Configure the device manager with numTypes, typeNames, and typeColors as attributes
             self._configure_device_manager(device_manager)
@@ -65,13 +88,13 @@ class VmoToolsGui:
 
         dialog.setInsets(15, 10, 0)
         dialog.addMessage('Tumor Image Tools:')
-        tumor_checkbox_labels = ['Segment Tumor Images', 'Measure Tumor Grey Level', 'Measure Tumor Circularity']
-        dialog.addCheckboxGroup(3, 1, tumor_checkbox_labels, [False] * 3)
+        tumor_checkbox_labels = ['Segment Tumor Images', 'Segment Tumor Weka', 'Measure Tumor Grey Level', 'Measure Tumor Circularity']
+        dialog.addCheckboxGroup(4, 1, tumor_checkbox_labels, [False] * 4)
 
         dialog.setInsets(15, 10, 0)
         dialog.addMessage('Vessel Image Tools:')
-        vessel_checkbox_labels = ['Threshold Vessel Images', 'Measure Vessel Diameter', 'Trace and export as .DXF']
-        dialog.addCheckboxGroup(3, 1, vessel_checkbox_labels, [False] * 3)
+        vessel_checkbox_labels = ['Threshold Vessel Images', 'Segment Vessel Weka', 'Measure Vessel Diameter', 'Trace and export as .DXF']
+        dialog.addCheckboxGroup(4, 1, vessel_checkbox_labels, [False] * 4)
 
         dialog.setOKLabel('Next ...')
         dialog.showDialog()
@@ -93,9 +116,11 @@ class VmoToolsGui:
         selected_option = dialog.getNextRadioButton()
         self.options['color'], self.options['merge'] = self._parse_color_merge_option(selected_option, radio_buttons)
         self.options['segment'] = dialog.getNextBoolean()
+        self.options['tumor_weka'] = dialog.getNextBoolean()
         self.options['meas_grey'] = dialog.getNextBoolean()
         self.options['meas_circ'] = dialog.getNextBoolean()
         self.options['threshold'] = dialog.getNextBoolean()
+        self.options['vessel_weka'] = dialog.getNextBoolean()
         self.options['meas_diam'] = dialog.getNextBoolean()
         self.options['dxf_out'] = dialog.getNextBoolean()
 
@@ -195,8 +220,12 @@ class VmoToolsGui:
             self._add_color_merge_options(dialog)
         if self.options['segment']:
             self._add_segment_options(dialog)
+        if self.options['tumor_weka']:
+            self._add_tumor_weka_options(dialog)
         if self.options['threshold']:
             self._add_threshold_options(dialog)
+        if self.options['vessel_weka']:
+            self._add_vessel_weka_options(dialog)
         if self.options['meas_diam']:
             self._add_measure_diameter_options(dialog)
         if self.options['meas_circ']:
@@ -235,6 +264,18 @@ class VmoToolsGui:
         dialog.setInsets(5, 25, 0)
         dialog.addCheckbox('Show segmented images', False)
 
+    def _add_tumor_weka_options(self, dialog):
+        """
+        Adds Tumor WekaSegmentation options to the dialog.
+
+        Args:
+            dialog (GenericDialog): The dialog instance where the Tumor WekaSegmentation options will be added.
+        """
+        dialog.setInsets(25, 20, 0)
+        dialog.addMessage('Segment Tumor Options:')
+        dialog.setInsets(5, 25, 0)
+        dialog.addCheckbox("Select Weka classifier file", False)
+
     def _add_threshold_options(self, dialog):
         """
         Adds threshold options to the dialog.
@@ -246,6 +287,18 @@ class VmoToolsGui:
         dialog.addMessage('Threshold Vessel Image Options:')
         dialog.setInsets(5, 25, 0)
         dialog.addCheckbox('Show thresholded images', False)
+
+    def _add_vessel_weka_options(self, dialog):
+        """
+        Adds Vessel WekaSegmentation options to the dialog.
+
+        Args:
+            dialog (GenericDialog): The dialog instance where the Vessel WekaSegmentation options will be added.
+        """
+        dialog.setInsets(25, 20, 0)
+        dialog.addMessage('Segment Vessel Options:')
+        dialog.setInsets(5, 25, 0)
+        dialog.addCheckbox("Select Weka Vessel classifier file", False)
 
     def _add_measure_diameter_options(self, dialog):
         """
@@ -322,8 +375,12 @@ class VmoToolsGui:
             self.options['show_merged'] = dialog.getNextBoolean()
         if self.options['segment']:
             self.options['show_segmented'] = dialog.getNextBoolean()
+        if self.options['tumor_weka']:
+            self.options['use_weka_segmentation'] = dialog.getNextBoolean()
         if self.options['threshold']:
             self.options['show_threshold'] = dialog.getNextBoolean()
+        if self.options['vessel_weka']:
+            self.options['use_vessel_weka_segmentation'] = dialog.getNextBoolean()
         if self.options['meas_diam']:
             self.options['hole_threshold'] = dialog.getNextNumber()
             self.options['area_threshold_vessels'] = dialog.getNextNumber()
