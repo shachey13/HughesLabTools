@@ -266,7 +266,7 @@ class VesselImage(DeviceImage):
         """
         # set output folders, get parametes, and set file names
         output_folder = self.output_path('Vessel_Analysis')
-        cleaned_folder = self.output_path('Cleaned_Images')
+        cleaned_folder, output_skeleton_dir, output_summary_dir = self._make_vessel_folders(output_folder)
         parameters = self._get_analysis_parameters(options)
         filename, base_filename = self._prepare_filenames()
 
@@ -276,7 +276,6 @@ class VesselImage(DeviceImage):
         expanded_imp = self._clean_image(parameters['image_cleaning_threshold']) # fixing this right now
         cleaned_save_path = join(cleaned_folder, splitext(self.getTitle())[0] + '_cleaned.tif')
         FileSaver(expanded_imp).saveAsTiff(cleaned_save_path)
-        cleaned_imp = expanded_imp.duplicate()
 
         # skeletonize and find branches
         IJ.run(expanded_imp, "Skeletonize", "")
@@ -287,17 +286,15 @@ class VesselImage(DeviceImage):
         # measure diameters
         IJ.run(test_imp, "Distance Map", "")
         output_imp, skeleton_values = self._skeleton_map(test_imp)
-        modified_imp, average_values = self._break_branches_and_analyze(output_imp, rt_all)
+        _ , average_values = self._break_branches_and_analyze(output_imp, rt_all)
 
         # compute area
         resultsArea = self._area_and_perimeter()
 
         # save results
         summary_table = self._create_summary_table(filename, branchNumber, average_values, skeleton_values, resultsArea)
-        output_skeleton_dir = self.output_path('skeleton')
         skeleton_save_path = join(output_skeleton_dir,splitext(self.getTitle())[0] + '_skeleton.tif')
         FileSaver(expanded_imp).saveAsTiff(skeleton_save_path)
-        output_summary_dir = self.output_path('summary')
         skeleton_values_save_path = join(output_summary_dir, splitext(self.getTitle())[0] + '_skeleton_values.csv')
         self._save_array_to_csv(skeleton_values, skeleton_values_save_path)
         summary_table_path = join(output_summary_dir, "quantification_summary.csv")
@@ -311,7 +308,16 @@ class VesselImage(DeviceImage):
 
         print("Done with vessel quantification")
 
+    def _make_vessel_folders(self, base_folder):
+        cleaned_folder = os.path.join(base_folder, 'Cleaned_Images')
+        skeleton_folder = os.path.join(base_folder, 'Skeleton')
+        summary_folder = os.path.join(base_folder, 'Summary')
 
+        for folder in [cleaned_folder, skeleton_folder, summary_folder]:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+
+        return cleaned_folder, skeleton_folder, summary_folder
 
     def _get_analysis_parameters(self, options):
         return {
@@ -330,7 +336,6 @@ class VesselImage(DeviceImage):
 
     def _expand_and_fill(self, parameters):
         expanded_imp = self.duplicate()
-        expaned_imp = self._custom_binarize(200)
         expanded_imp, _ = self._fill_holes_and_remove_small_regions(
             parameters['hole_threshold'],
             parameters['area_threshold_vessels']
@@ -601,16 +606,14 @@ class VesselImage(DeviceImage):
         """
         Map the skeleton onto the image and extract skeleton values.
         """
-        expanded_imp = self  # Assuming self is the skeleton image
-
-        if cleaned_imp.getWidth() != expanded_imp.getWidth() or cleaned_imp.getHeight() != expanded_imp.getHeight():
+        if cleaned_imp.getWidth() != self.getWidth() or cleaned_imp.getHeight() != self.getHeight():
             raise ValueError("Both images must have the same dimensions.")
 
         width = cleaned_imp.getWidth()
         height = cleaned_imp.getHeight()
 
         cleaned_ip = cleaned_imp.getProcessor()
-        expanded_ip = expanded_imp.getProcessor()
+        expanded_ip = self.getProcessor()
 
         output_ip = FloatProcessor(width, height)
 
@@ -730,4 +733,3 @@ class VesselImage(DeviceImage):
         with open(file_path, 'w') as f:
             for value in array:
                 f.write(str(value) + "\n")
-
