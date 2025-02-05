@@ -4,7 +4,7 @@ from os.path import join, splitext
 from java.lang import Double
 from ij.plugin.frame import RoiManager
 from ij.plugin import CanvasResizer
-from ij.plugin.filter import ParticleAnalyzer, Analyzer
+from ij.plugin.filter import ParticleAnalyzer, Analyzer, ThresholdToSelection
 from ij.measure import ResultsTable, Measurements
 from ij.gui import Roi
 from ij.process import ImageProcessor, FloatProcessor
@@ -297,17 +297,16 @@ class VesselImage(DeviceImage):
         Fill holes in the image and remove small regions below the given thresholds.
         """
         rt = ResultsTable()
-        roi_manager = RoiManager.getInstance()
-        if roi_manager is None:
-            roi_manager = RoiManager()
+        roi_manager = RoiManager(False)
         roi_manager.reset()
 
         IJ.run(self, "Invert", "")
 
-        options = ParticleAnalyzer.ADD_TO_MANAGER + ParticleAnalyzer.SHOW_MASKS + ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES
+        options = ParticleAnalyzer.SHOW_NONE + ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES
         measurements = Measurements.AREA
 
         pa = ParticleAnalyzer(options, measurements, rt, 0, hole_threshold)
+        pa.setRoiManager(roi_manager)
         pa.setHideOutputImage(True)
         pa.analyze(self)
 
@@ -329,9 +328,10 @@ class VesselImage(DeviceImage):
 
         ip = self.getProcessor()
 
-        pa = ParticleAnalyzer(ParticleAnalyzer.ADD_TO_MANAGER + ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES,
+        pa = ParticleAnalyzer( ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES,
                               Measurements.AREA, rt, 0, area_threshold_vessel)
         pa.setHideOutputImage(True)
+        pa.setRoiManager(roi_manager)
         pa.analyze(self)
 
         rois = roi_manager.getRoisAsArray()
@@ -395,6 +395,7 @@ class VesselImage(DeviceImage):
         """
         analyzeSkeleton = AnalyzeSkeleton_()
         analyzeSkeleton.setup("", self)
+        #analyzeSkeleton.setShowResults(False)
         results = analyzeSkeleton.run(AnalyzeSkeleton_.NONE, False, False, None, True, False)
 
         # Run the Analyze Skeleton plugin
@@ -475,19 +476,17 @@ class VesselImage(DeviceImage):
 
         modified_ip.setThreshold(1, Double.MAX_VALUE, ImageProcessor.NO_LUT_UPDATE)
 
-        roi_manager = RoiManager.getInstance()
-        if roi_manager is None:
-            roi_manager = RoiManager()
-        roi_manager.reset()
+        roi_manager = RoiManager(False)
 
         rt_segments = ResultsTable()
-        pa = ParticleAnalyzer(ParticleAnalyzer.ADD_TO_MANAGER | ParticleAnalyzer.SHOW_NONE | ParticleAnalyzer.RECORD_STARTS,
+        pa = ParticleAnalyzer(ParticleAnalyzer.SHOW_NONE | ParticleAnalyzer.RECORD_STARTS,
                               Measurements.AREA | Measurements.CENTROID, rt_segments, 0, Double.POSITIVE_INFINITY)
         pa.setHideOutputImage(True)
+        pa.setRoiManager(roi_manager)
         pa.analyze(modified_imp)
         hole_rois = roi_manager.getRoisAsArray()
 
-        self.show()
+        #self.show()
 
         for i in range(rt_segments.size()):
             mean_val = rt_segments.getValue("Area", i)
@@ -589,9 +588,7 @@ class VesselImage(DeviceImage):
         """
         Calculate area and perimeter of the vessel and perivascular regions.
         """
-        roi_manager = RoiManager.getInstance()
-        if roi_manager is None:
-            roi_manager = RoiManager()
+        roi_manager = RoiManager(False)
         roi_manager.reset()
 
         unique_results_table = ResultsTable()
@@ -746,7 +743,7 @@ class VesselImage(DeviceImage):
         summary_table.save(summary_table_path)
 
         # Close ROI Manager
-        roi_manager = RoiManager.getInstance()
+        roi_manager = RoiManager(False)
         if roi_manager:
             roi_manager.reset()
             roi_manager.close()
