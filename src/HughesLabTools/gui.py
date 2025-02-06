@@ -13,7 +13,10 @@ class VmoToolsGui:
 
     def __init__(self):
         """Initializes an empty options dictionary and sets num_types to None."""
-        self.options = {}
+        self.options = {
+            'use_weka_segmentation_vessels': False,
+            'use_weka_segmentation_tumor': False
+        }
         self.num_types = None
         self.type_names = []
         self.type_colors = []
@@ -169,6 +172,30 @@ class VmoToolsGui:
         self.num_types = int(dialog.getNextChoice())  # Store numTypes separately
         return True
 
+    def _add_weka_segmentation_options(self, dialog):
+        """
+        Adds Weka Segmentation options to the dialog if certain conditions are met.
+
+        Args:
+            dialog (GenericDialog): The dialog instance where the Weka Segmentation options will be added.
+        """
+        show_vessels = (self.options['meas_diam'] or self.options['dxf_out'])
+        show_tumor = (self.options['meas_grey'] or self.options['meas_circ'])
+
+        if show_vessels or show_tumor:
+            dialog.setInsets(25, 20, 0)
+            dialog.addMessage('Use Weka Segmentation:')
+
+            dialog.setInsets(5, 25, 0)
+
+            if show_tumor:
+                dialog.addCheckbox("Tumor", False)
+                if show_vessels:
+                    dialog.addToSameRow()
+
+            if show_vessels:
+                dialog.addCheckbox("Vessels", False)
+
     def _collect_additional_options(self):
         """
         Collects additional options such as image type names and colors.
@@ -233,6 +260,7 @@ class VmoToolsGui:
         if self.options['dxf_out']:
             self._add_dxf_options(dialog)
 
+        self._add_weka_segmentation_options(dialog)
         self._add_file_options(dialog)
 
     def _add_color_merge_options(self, dialog):
@@ -395,6 +423,12 @@ class VmoToolsGui:
         if self.options['dxf_out']:
             self.options['smooth_bool'] = dialog.getNextBoolean()
             self.options['smooth_value'] = dialog.getNextNumber()
+
+        # Handle the new Weka Segmentation options
+        if self.options['meas_diam'] or self.options['dxf_out']:
+            self.options['use_weka_segmentation_vessels'] = dialog.getNextBoolean()
+        if self.options['meas_grey'] or self.options['meas_circ']:
+            self.options['use_weka_segmentation_tumor'] = dialog.getNextBoolean()
 
         # Only store operational options in self.options
         self.options['process_subdirectories'] = dialog.getNextBoolean()
