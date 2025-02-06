@@ -1,4 +1,4 @@
-from ij import IJ, ImagePlus, Prefs
+from ij import IJ, ImagePlus, Prefs, WindowManager
 from ij.plugin.filter import Binary
 from ij.process import FloatProcessor, ImageProcessor
 import os
@@ -156,7 +156,9 @@ class DeviceImage(ImagePlus):
         segmented_image_path = os.path.join(segment_folder, "{}-Segment.tif".format(os.path.splitext(self.getTitle())[0]))
         IJ.saveAs(result_imp, "Tiff", segmented_image_path)
         print(segmented_image_path)
-        result_imp.close()
+
+        # clean up
+        IJ.run("Close All")
 
         IJ.log("Segmentation completed for image: {}".format(self.getTitle()))
 

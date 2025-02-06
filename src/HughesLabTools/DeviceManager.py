@@ -7,6 +7,7 @@ from HughesLabTools.Device import Device
 from HughesLabTools.gui import VmoToolsGui, ImageTypeChangerGui
 from HughesLabTools.DeviceImage import  DeviceImage
 from HughesLabTools.VesselsImage import VesselImage
+from HughesLabTools.TumorImage import TumorImage
 
 class DeviceManager:
     def __init__(self, rootDir="", numTypes=1, typeNames=None, typeColors=None, verbose=False, options=None):
@@ -231,9 +232,13 @@ class DeviceManager:
                             vessel.process_dxf(device_manager = self)
 
             # Run Tumor Image processing
-            if self.options.get('segment') or self.options.get('meas_grey') or self.options.get('meas_circ'):
+            if self.options.get('segment') or self.options.get('tumor_weka') or self.options.get('meas_grey') or self.options.get('meas_circ'):
                 self.log("Processing tumor images for device: {}".format(device.name))
                 tumor_image_paths = device.get_image_paths('Tumor')
+
+                if self.options.get('tumor_weka'):
+                    device_image = device._load_image(tumor_image_paths[0])
+                    device_image.prepare_for_segmentation()
 
                 if tumor_image_paths:
                     tumor_image_paths = tumor_image_paths if isinstance(tumor_image_paths, list) else [tumor_image_paths]
@@ -250,6 +255,11 @@ class DeviceManager:
                             segmented_image = tumor.segment_tumor()
                             if self.options.get('show_segmented', False):
                                 segmented_image.show()
+
+                        # Segment the image
+                        if self.options.get('tumor_weka'):
+                            self.log("Segmenting tumor image: {}".format(tumor_image_path))
+                            device_image.segment_image(self.options.get('tumor_weka_classifier'), 'Tumor_Segmented')
 
                         # Measure Tumor Grey Level
                         if self.options.get('meas_grey'):

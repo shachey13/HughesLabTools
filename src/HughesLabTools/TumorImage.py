@@ -1,5 +1,7 @@
 from __future__ import print_function
-from ij import IJ, ImageCalculator, ResultsTable
+from ij import IJ
+from ij.measure import ResultsTable
+from ij.plugin import ImageCalculator
 from DeviceImage import DeviceImage
 import os
 from os.path import splitext, join
