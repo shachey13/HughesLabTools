@@ -220,6 +220,26 @@ class DeviceManager:
                             self.log("Segmenting vessel image: {}".format(vessel_image_path))
                             device_image.segment_image(self.options.get('vessel_weka_classifier'), 'Vessel_Segmented')
 
+                        if self.options.get('use_weka_segmentation_vessels'):
+                            # Check if Vessel_Segmented folder is created
+                            segmented_folder = os.path.join(os.path.dirname(vessel_image_path), 'Vessel_Segmented')
+                            if os.path.exists(segmented_folder):
+                                # Find the corresponding segmented image
+                                original_filename = os.path.basename(vessel_image_path)
+                                segmented_filename = os.path.splitext(original_filename)[0] + "-Segment.tif"
+                                segmented_image_path = os.path.join(segmented_folder, segmented_filename)
+                                print(segmented_image_path)
+
+                                if os.path.exists(segmented_image_path):
+                                    self.log("Using Weka segmented image: {}".format(segmented_image_path))
+                                    # Create a new instance of device_image and vessel
+                                    device_image = device._load_image(segmented_image_path, verbose=self.verbose)
+                                    vessel = VesselImage.from_image_plus(device_image, verbose=self.verbose)
+                                else:
+                                    self.log("Warning: Segmented image not found. Using original image: {}".format(vessel_image_path))
+                            else:
+                                self.log("Warning: Vessel_Segmented folder not found. Using original image: {}".format(vessel_image_path))
+
                         # Measure Vessel Diameter
                         if self.options.get('meas_diam'):
                             self.log("Measuring vessel diameter for image: {}".format(vessel_image_path))
@@ -260,6 +280,27 @@ class DeviceManager:
                         if self.options.get('tumor_weka'):
                             self.log("Segmenting tumor image: {}".format(tumor_image_path))
                             device_image.segment_image(self.options.get('tumor_weka_classifier'), 'Tumor_Segmented')
+
+                        # change path if using the segmented tumor
+                        if self.options.get('use_weka_segmentation_tumor'):
+                            # Check if Vessel_Segmented folder is created
+                            segmented_folder = os.path.join(os.path.dirname(tumor_image_path), 'Tumor_Segmented')
+                            if os.path.exists(segmented_folder):
+                                # Find the corresponding segmented image
+                                original_filename = os.path.basename(tumor_image_path)
+                                segmented_filename = os.path.splitext(original_filename)[0] + "-Segment.tif"
+                                segmented_image_path = os.path.join(segmented_folder, segmented_filename)
+                                print(segmented_image_path)
+
+                                if os.path.exists(segmented_image_path):
+                                    self.log("Using Weka segmented image: {}".format(segmented_image_path))
+                                    # Create a new instance of device_image and vessel
+                                    tumor_image = device._load_image(segmented_image_path, verbose=self.verbose)
+                                    tumor = TumorImage(title=tumor_image.getTitle(), img=tumor_image.getProcessor())
+                                else:
+                                    self.log("Warning: Segmented image not found. Using original image: {}".format(tumor_image_path))
+                            else:
+                                self.log("Warning: Vessel_Segmented folder not found. Using original image: {}".format(tumor_image_path))
 
                         # Measure Tumor Grey Level
                         if self.options.get('meas_grey'):
