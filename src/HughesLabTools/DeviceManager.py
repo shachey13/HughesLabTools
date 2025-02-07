@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 import os
 import re
+import csv
 from java.lang import System
 from ij import IJ, ImagePlus
 from HughesLabTools.Device import Device
@@ -155,7 +156,7 @@ class DeviceManager:
         self.log("Assigned images to {} devices.".format(num_devices))
 
     def _get_sorted_image_files(self, root, files, formats):
-        image_files = [os.path.join(root, file) for file in files if self._is_valid_format(file, formats)]
+        image_files = [os.path.join(root, file) for file in files if self._is_valid_format(file, formats) and not file.startswith('.')]
         image_files = sorted(image_files, key=self._natural_sort_key)
         return image_files
 
@@ -171,6 +172,14 @@ class DeviceManager:
     def run_selected_processes(self):
         """Run all selected processes based on the options configuration."""
         self.walk_directory_and_add_images()  # Always walk the directory
+
+        # check if diameter measurements are to be run and create csv
+        if self.options.get('meas_diam'):
+            output_summary_dir = os.path.join(self.rootDir, 'Vessel_Analysis', 'Summary')
+            if not os.path.exists(output_summary_dir):
+                os.makedirs(output_summary_dir)
+            self.create_new_summary_csv(output_summary_dir)
+
 
         # Process each device
         for device in self.devices:
@@ -244,7 +253,7 @@ class DeviceManager:
                         if self.options.get('meas_diam'):
                             self.log("Measuring vessel diameter for image: {}".format(vessel_image_path))
                             # Implement measurement logic here (if method is defined)
-                            vessel.perform_vessel_analysis(options = self.options)
+                            vessel.perform_vessel_analysis(options = self.options, summary_csv_path=self.summary_csv_path)
                             # vessel.measure_diameter()
 
                         if self.options.get('dxf_out'):
@@ -319,4 +328,20 @@ class DeviceManager:
 
         self.log("Finished processing all devices.")
 
+    def create_new_summary_csv(self, output_summary_dir):
+        """
+        Create a new CSV file.
+        """
+        #timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.summary_csv_path = os.path.join(output_summary_dir, "quantification_summary.csv")
 
+        # Create an empty file with headers
+        with open(self.summary_csv_path, 'wb') as f:
+            writer = csv.writer(f)
+            # You may need to adjust these headers based on your summary table structure
+            headers = ["Filename", "No. Branch points", "No. segments", "Mean Radius",
+                       "Vessel Area", "Vessel Perimeter", "Perivascular Area",
+                       "Perivascular Perimeter", "Average branch radius"]
+            writer.writerow(headers)
+
+        return self.summary_csv_path

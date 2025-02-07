@@ -7,9 +7,10 @@ from ij.plugin import CanvasResizer
 from ij.plugin.filter import ParticleAnalyzer, Analyzer, ThresholdToSelection
 from ij.measure import ResultsTable, Measurements
 from ij.gui import Roi
-from ij.process import ImageProcessor, FloatProcessor
+from ij.process import ImageProcessor, FloatProcessor, ImageConverter
 from ij.io import FileSaver
 import math
+import csv
 from HughesLabTools.DeviceImage import DeviceImage
 
 # Ensure that the AnalyzeSkeleton_ plugin is available
@@ -260,7 +261,7 @@ class VesselImage(DeviceImage):
 
 
     ## Vessel Quantification Methods
-    def perform_vessel_analysis(self, options):
+    def perform_vessel_analysis(self, options, summary_csv_path):
         """
         Perform vessel analysis on the image and save results.
         """
@@ -271,25 +272,27 @@ class VesselImage(DeviceImage):
         filename, base_filename = self._prepare_filenames()
 
         # duplicate and process the image
-        expanded_imp = self._expand_and_fill(parameters)
+        expanded_imp, og_imp = self._expand_and_fill(parameters)
         test_imp = expanded_imp.duplicate()
-        expanded_imp = self._clean_image(parameters['image_cleaning_threshold']) # fixing this right now
-        cleaned_save_path = join(cleaned_folder, splitext(self.getTitle())[0] + '_cleaned.tif')
-        FileSaver(expanded_imp).saveAsTiff(cleaned_save_path)
+        expanded_imp = self._clean_image(expanded_imp, parameters['image_cleaning_threshold'])
 
         # skeletonize and find branches
         IJ.run(expanded_imp, "Skeletonize", "")
-        rt_all, rt_unique, branchNumber = self._process_junction_points(distance_threshold=parameters['distance_threshold'])
-        expanded_imp = self._break_branches_and_prune(rt_all, parameters['mean_threshold'])
-        rt_all, rt_unique, branchNumber = self._process_junction_points(distance_threshold=parameters['distance_threshold'])
+        rt_all, rt_unique, branchNumber = self._process_junction_points(expanded_imp, distance_threshold=parameters['distance_threshold'])
+        expanded_imp = self._break_branches_and_prune(expanded_imp, rt_all, parameters['mean_threshold'])
+        cleaned_save_path = join(cleaned_folder, splitext(self.getTitle())[0] + '_cleaned2.tif')
+        FileSaver(expanded_imp).saveAsTiff(cleaned_save_path)
+        rt_all, rt_unique, branchNumber = self._process_junction_points(expanded_imp, distance_threshold=parameters['distance_threshold'])
 
         # measure diameters
         IJ.run(test_imp, "Distance Map", "")
-        output_imp, skeleton_values = self._skeleton_map(test_imp)
+        output_imp, skeleton_values = self._skeleton_map(expanded_imp, test_imp)
         _ , average_values = self._break_branches_and_analyze(output_imp, rt_all)
 
         # compute area
-        resultsArea = self._area_and_perimeter()
+        #og_imp = self.duplicate()
+        og_imp = self._custom_binarize(og_imp, 200)
+        resultsArea = self._area_and_perimeter(og_imp)
 
         # save results
         summary_table = self._create_summary_table(filename, branchNumber, average_values, skeleton_values, resultsArea)
@@ -298,7 +301,7 @@ class VesselImage(DeviceImage):
         skeleton_values_save_path = join(output_summary_dir, splitext(self.getTitle())[0] + '_skeleton_values.csv')
         self._save_array_to_csv(skeleton_values, skeleton_values_save_path)
         summary_table_path = join(output_summary_dir, "quantification_summary.csv")
-        summary_table.save(summary_table_path)
+        self._append_to_summary_csv(summary_table, summary_csv_path)
 
         # Close ROI Manager
         roi_manager = RoiManager(False)
@@ -336,21 +339,25 @@ class VesselImage(DeviceImage):
 
     def _expand_and_fill(self, parameters):
         expanded_imp = self.duplicate()
-        expanded_imp, _ = self._fill_holes_and_remove_small_regions(
+        if expanded_imp.getType() == ImagePlus.COLOR_RGB:
+            IJ.log("Warning: RGB image detected. Converting to grayscale: {}".format(self.getTitle()))
+            IJ.run(expanded_imp, "8-bit", "")
+        og_imp = expanded_imp
+        expanded_imp, _ = self._fill_holes_and_remove_small_regions(expanded_imp,
             parameters['hole_threshold'],
             parameters['area_threshold_vessels']
         )
-        expanded_imp = self._custom_binarize(200)
-        expanded_imp = self._invert_and_fill_holes()
-        expanded_imp = self._custom_binarize(200)
-        return expanded_imp
+        expanded_imp = self._custom_binarize(expanded_imp, 200)
+        expanded_imp = self._invert_and_fill_holes(expanded_imp)
+        expanded_imp = self._custom_binarize(expanded_imp, 200)
+        return expanded_imp, og_imp
 
 
-    def _custom_binarize(self, threshold):
+    def _custom_binarize(self, imp, threshold):
         """
         Apply custom binarization to the image using the provided threshold.
         """
-        ip = self.getProcessor()
+        ip = imp.getProcessor()
         width = ip.getWidth()
         height = ip.getHeight()
 
@@ -362,23 +369,23 @@ class VesselImage(DeviceImage):
                 else:
                     ip.putPixel(x, y, 255)
 
-        self.updateAndDraw()
-        return self
+        imp.updateAndDraw()
+        return imp
 
-    def _clean_image(self, threshold):
+    def _clean_image(self, imp, threshold):
         """
         Clean the image using distance map and threshold.
         """
-        IJ.run(self, "Distance Map", "")
-        IJ.setAutoThreshold(self, "Default dark")
-        ip = self.getProcessor()
+        IJ.run(imp, "Distance Map", "")
+        IJ.setAutoThreshold(imp, "Default dark")
+        ip = imp.getProcessor()
         ip.setThreshold(threshold, 255, ImageProcessor.NO_LUT_UPDATE)
-        self.setProcessor(ip)
-        IJ.run(self, "Options...", "black")
-        IJ.run(self, "Convert to Mask", "")
-        return self
+        imp.setProcessor(ip)
+        IJ.run(imp, "Options...", "black")
+        IJ.run(imp, "Convert to Mask", "")
+        return imp
 
-    def _fill_holes_and_remove_small_regions(self, hole_threshold, area_threshold_vessel):
+    def _fill_holes_and_remove_small_regions(self, imp, hole_threshold, area_threshold_vessel):
         """
         Fill holes in the image and remove small regions below the given thresholds.
         """
@@ -386,7 +393,7 @@ class VesselImage(DeviceImage):
         roi_manager = RoiManager(False)
         roi_manager.reset()
 
-        IJ.run(self, "Invert", "")
+        IJ.run(imp, "Invert", "")
 
         options = ParticleAnalyzer.SHOW_NONE + ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES
         measurements = Measurements.AREA
@@ -394,10 +401,10 @@ class VesselImage(DeviceImage):
         pa = ParticleAnalyzer(options, measurements, rt, 0, hole_threshold)
         pa.setRoiManager(roi_manager)
         pa.setHideOutputImage(True)
-        pa.analyze(self)
+        pa.analyze(imp)
 
         hole_rois = roi_manager.getRoisAsArray()
-        ip = self.getProcessor()
+        ip = imp.getProcessor()
 
         for i, roi in enumerate(hole_rois):
             area = rt.getValue("Area", i)
@@ -406,19 +413,19 @@ class VesselImage(DeviceImage):
                 ip.setValue(0)
                 ip.fill(roi)
 
-        IJ.run(self, "Invert", "")
-        self.updateAndDraw()
+        IJ.run(imp, "Invert", "")
+        imp.updateAndDraw()
 
         roi_manager.reset()
         rt.reset()
 
-        ip = self.getProcessor()
+        ip = imp.getProcessor()
 
         pa = ParticleAnalyzer( ParticleAnalyzer.EXCLUDE_EDGE_PARTICLES,
                               Measurements.AREA, rt, 0, area_threshold_vessel)
         pa.setHideOutputImage(True)
         pa.setRoiManager(roi_manager)
-        pa.analyze(self)
+        pa.analyze(imp)
 
         rois = roi_manager.getRoisAsArray()
 
@@ -429,31 +436,31 @@ class VesselImage(DeviceImage):
                 ip.setValue(0)
                 ip.fill(roi)
 
-        self.updateAndDraw()
-        self.setOverlay(None)
+        imp.updateAndDraw()
+        imp.setOverlay(None)
 
-        return self, hole_rois
+        return imp, hole_rois
 
-    def _invert_and_fill_holes(self):
+    def _invert_and_fill_holes(self, imp):
         """
         Invert the image and fill holes.
         """
-        if self is None:
+        if imp is None:
             print("The ImagePlus object is None")
             return None
 
-        IJ.run(self, "Invert", "")
-        IJ.run(self, "Fill Holes", "")
-        IJ.run(self, "Invert", "")
+        IJ.run(imp, "Invert", "")
+        IJ.run(imp, "Fill Holes", "")
+        IJ.run(imp, "Invert", "")
 
-        return self
+        return imp
 
-    def _process_junction_points(self, distance_threshold):
+    def _process_junction_points(self, imp, distance_threshold):
         """
         Process junction points in the skeleton image.
         """
         analyzeSkeleton = AnalyzeSkeleton_()
-        analyzeSkeleton.setup("", self)
+        analyzeSkeleton.setup("", imp)
         results = analyzeSkeleton.run(AnalyzeSkeleton_.NONE, False, False, None, True, False)
 
         branchNumber = results.getBranches()
@@ -519,11 +526,11 @@ class VesselImage(DeviceImage):
             clusters.append(cluster)
         return clusters
 
-    def _break_branches_and_prune(self, rt_all, mean_threshold):
+    def _break_branches_and_prune(self, imp, rt_all, mean_threshold):
         """
         Break branches in the skeleton and remove small segments based on mean threshold.
         """
-        output_ip = self.getProcessor()
+        output_ip = imp.getProcessor()
         modified_ip = output_ip.duplicate()
         modified_imp = ImagePlus("Modified Skeleton", modified_ip)
 
@@ -602,7 +609,7 @@ class VesselImage(DeviceImage):
                         neighbours.append(Point(nx, ny))
         return neighbours
 
-    def _skeleton_map(self, cleaned_imp):
+    def _skeleton_map(self, expanded_imp, cleaned_imp):
         """
         Map the skeleton onto the image and extract skeleton values.
         """
@@ -613,7 +620,7 @@ class VesselImage(DeviceImage):
         height = cleaned_imp.getHeight()
 
         cleaned_ip = cleaned_imp.getProcessor()
-        expanded_ip = self.getProcessor()
+        expanded_ip = expanded_imp.getProcessor()
 
         output_ip = FloatProcessor(width, height)
 
@@ -658,7 +665,7 @@ class VesselImage(DeviceImage):
 
         return modified_imp, average_values
 
-    def _area_and_perimeter(self):
+    def _area_and_perimeter(self, imp):
         """
         Calculate area and perimeter of the vessel and perivascular regions.
         """
@@ -667,25 +674,25 @@ class VesselImage(DeviceImage):
 
         unique_results_table = ResultsTable()
 
-        if self is None:
+        if imp is None:
             print("The ImagePlus object is None")
             return None
 
         # Set measurements to include Area and Perimeter
         IJ.run("Set Measurements...", "area perimeter")
-        IJ.run(self, "Create Selection", "")
-        roi_manager.addRoi(self.getRoi())
+        IJ.run(imp, "Create Selection", "")
+        roi_manager.addRoi(imp.getRoi())
 
-        analyzer = Analyzer(self, unique_results_table)
+        analyzer = Analyzer(imp, unique_results_table)
         analyzer.measure()
 
         original_area = unique_results_table.getValue("Area", unique_results_table.size() - 1)
         original_perimeter = unique_results_table.getValue("Perim.", unique_results_table.size() - 1)
 
-        IJ.run(self, "Invert", "")
-        IJ.run(self, "Make Inverse", "")
+        IJ.run(imp, "Invert", "")
+        IJ.run(imp, "Make Inverse", "")
 
-        roi_manager.addRoi(self.getRoi())
+        roi_manager.addRoi(imp.getRoi())
         analyzer.measure()
 
         inverted_area = unique_results_table.getValue("Area", unique_results_table.size() - 1)
@@ -733,3 +740,13 @@ class VesselImage(DeviceImage):
         with open(file_path, 'w') as f:
             for value in array:
                 f.write(str(value) + "\n")
+
+    def _append_to_summary_csv(self, summary_table, file_path):
+        """
+        Append the summary table to the CSV file created for this run.
+        """
+        row_data = [summary_table.getStringValue(i, 0) for i in range(summary_table.getLastColumn() + 1)]
+
+        with open(file_path, 'ab') as f:
+            writer = csv.writer(f)
+            writer.writerow(row_data)

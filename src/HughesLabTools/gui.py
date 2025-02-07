@@ -44,7 +44,7 @@ class VmoToolsGui:
         if not self._collect_root_directory():
             return None  # Stop if the user cancels the directory selection
 
-        # Add this new step for Weka file selection before root directory selection
+        # Add this new step for Weka file selection after root directory selection
         if self.options.get('tumor_weka', False) and self.options.get('use_weka_segmentation', False):
             od = OpenDialog("Select Weka classifier file for tumor segmentation", None)
             weka_file = od.getPath()
@@ -55,7 +55,7 @@ class VmoToolsGui:
                 IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
                 self.options['use_weka_segmentation'] = False
 
-        # Add this new step for Weka file selection before root directory selection
+        # Add this new step for Weka file selection after root directory selection
         if self.options.get('vessel_weka', False) and self.options.get('use_vessel_weka_segmentation', False):
             od = OpenDialog("Select Weka classifier file for Vessel segmentation", None)
             weka_file = od.getPath()
