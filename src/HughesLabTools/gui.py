@@ -89,6 +89,12 @@ class VmoToolsGui:
         radio_buttons = ['Color and Merge Images', 'Color Images', 'No Coloring']
         dialog.addRadioButtonGroup('Image Coloring Tools:', radio_buttons, 3, 1, radio_buttons[0])
 
+        # Cropping section
+        dialog.setInsets(15, 10, 0)
+        dialog.addMessage('Cropping Tools:')
+        cropping_checkbox_label = ['Crop Images']
+        dialog.addCheckboxGroup(1, 1, cropping_checkbox_label, [False])
+
         dialog.setInsets(15, 10, 0)
         dialog.addMessage('Tumor Image Tools:')
         tumor_checkbox_labels = ['Segment Tumor Images', 'Segment Tumor Weka', 'Measure Tumor Grey Level', 'Measure Tumor Circularity']
@@ -118,6 +124,7 @@ class VmoToolsGui:
         """
         selected_option = dialog.getNextRadioButton()
         self.options['color'], self.options['merge'] = self._parse_color_merge_option(selected_option, radio_buttons)
+        self.options['crop'] = dialog.getNextBoolean()
         self.options['segment'] = dialog.getNextBoolean()
         self.options['tumor_weka'] = dialog.getNextBoolean()
         self.options['meas_grey'] = dialog.getNextBoolean()
@@ -245,6 +252,8 @@ class VmoToolsGui:
         """
         if self.options['color']:
             self._add_color_merge_options(dialog)
+        if self.options['crop']:
+            self._add_crop_options(dialog)
         if self.options['segment']:
             self._add_segment_options(dialog)
         if self.options['tumor_weka']:
@@ -279,6 +288,38 @@ class VmoToolsGui:
         if self.options['merge']:
             dialog.setInsets(5, 25, 0)
             dialog.addCheckbox('Show merged images', self.options.get('show_merged', False))
+
+    def _add_crop_options(self, dialog):
+        """
+        Adds cropping options to dialog.
+
+        Args:
+            dialog (GenericDialog): The dialog instance where the color and merge options will be added.
+        """
+        dialog.setInsets(15, 10, 0)
+        dialog.addMessage('Cropping Options:')
+        dialog.setInsets(5, 20, 0)
+
+        # Add a Dropdown (Choice) for Cropping Methods
+        cropping_methods = ['Crop using same coordinates', 'Crop each pair', 'Crop each image']
+        dialog.addRadioButtonGroup("Select Cropping Method:", cropping_methods, 1, 3, cropping_methods[0])
+
+        dialog.setInsets(5, 25, 0)
+        dialog.addCheckbox('Use cropped images', True)
+
+    def _parse_crop_type(self, selected_option):
+        """
+        Helper function to parse the crop type option.
+
+        Args:
+            selected_option (str): The selected radio button option.
+
+        Returns:
+            str: The crop type based on the selected option.
+        """
+        crop_types = ['same', 'pair', 'individual']
+        crop_options = ['Crop using same coordinates', 'Crop each pair', 'Crop each image']
+        return crop_types[crop_options.index(selected_option)]
 
     def _add_segment_options(self, dialog):
         """
@@ -401,6 +442,10 @@ class VmoToolsGui:
             self.options['sat'] = dialog.getNextNumber()
         if self.options['merge']:
             self.options['show_merged'] = dialog.getNextBoolean()
+        if self.options['crop']:
+            selected_crop_option = dialog.getNextRadioButton()
+            self.options['crop_type'] = self._parse_crop_type(selected_crop_option)
+            self.options['use_crop'] = dialog.getNextBoolean()
         if self.options['segment']:
             self.options['show_segmented'] = dialog.getNextBoolean()
         if self.options['tumor_weka']:
