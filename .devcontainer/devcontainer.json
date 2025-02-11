@@ -1,0 +1,27 @@
+{
+  "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu",
+  "postCreateCommand": [
+    "apt update && apt install -y default-jre curl python2.7 python-dev wget unzip",
+    "wget https://downloads.imagej.net/fiji/latest/fiji-linux64.zip",
+    "unzip fiji-linux64.zip -d /home/codespace/fiji",
+    "rm fiji-linux64.zip",
+    "wget https://repo1.maven.org/maven2/org/python/jython-installer/2.7.3/jython-installer-2.7.3.jar",
+    "java -jar jython-installer-2.7.3.jar --console --install /usr/local/jython-2.7.3",
+    "rm jython-installer-2.7.3.jar",
+    "ln -s /usr/local/jython-2.7.3/bin/* /usr/local/bin/"
+  ],
+  "vscode": {
+    "extensions": [
+      "vscjava.vscode-java-pack"
+    ]
+  },
+  "mounts": [
+    "source=devcontainer-fiji-app,target=/home/codespace/fiji/Fiji.app,type=volume"
+  ],
+  "portsAttributes": {
+    "8080": {
+      "label": "Fiji/ImageJ",
+      "on": "auto"
+    }
+  }
+}
