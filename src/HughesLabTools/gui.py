@@ -105,6 +105,11 @@ class VmoToolsGui:
         vessel_checkbox_labels = ['Threshold Vessel Images', 'Segment Vessel Weka', 'Measure Vessel Diameter', 'Trace and export as .DXF']
         dialog.addCheckboxGroup(4, 1, vessel_checkbox_labels, [False] * 4)
 
+        dialog.setInsets(15, 10, 0)
+        dialog.addMessage('Perfusion Image Tools:')
+        perfusion_checkbox_labels = ['Perfusion Calculation', 'Permeability Calculation']
+        dialog.addCheckboxGroup(2, 1, perfusion_checkbox_labels, [False] * 2)
+
         dialog.setOKLabel('Next ...')
         dialog.showDialog()
 
@@ -133,6 +138,8 @@ class VmoToolsGui:
         self.options['vessel_weka'] = dialog.getNextBoolean()
         self.options['meas_diam'] = dialog.getNextBoolean()
         self.options['dxf_out'] = dialog.getNextBoolean()
+        self.options['perfusion_calc'] = dialog.getNextBoolean()
+        self.options['permeability_calc'] = dialog.getNextBoolean()
 
     def _parse_color_merge_option(self, selected_option, radio_buttons):
         """
@@ -268,6 +275,10 @@ class VmoToolsGui:
             self._add_circularity_options(dialog)
         if self.options['dxf_out']:
             self._add_dxf_options(dialog)
+        if self.options['perfusion_calc']:
+            self._add_perfusion_options(dialog)
+        if self.options['permeability_calc']:
+            self._add_permeability_options(dialog)
 
         self._add_weka_segmentation_options(dialog)
         self._add_file_options(dialog)
@@ -413,6 +424,22 @@ class VmoToolsGui:
         dialog.addCheckbox("Enable Smoothing", False)
         dialog.addNumericField("Smoothing Value", 2, 0)
 
+    def _add_perfusion_options(self, dialog):
+        dialog.setInsets(25, 20, 0)
+        dialog.addMessage('Perfusion Calculation Options:')
+        dialog.setInsets(5, 25, 0)
+        dialog.addNumericField("Images per N", 1, 0)
+        dialog.setInsets(5, 25, 0)
+        dialog.addNumericField("Starting/Reference Image", 1, 0)
+
+    def _add_permeability_options(self, dialog):
+        dialog.setInsets(25, 20, 0)
+        dialog.addMessage('Permeability Calculation Options:')
+        dialog.setInsets(5, 25, 0)
+        dialog.addNumericField("Images per N", 1, 0)
+        # Add any specific options for permeability calculation here
+        # For example:
+        # dialog.addNumericField("Permeability factor:", 1.0, 2)
 
     def _add_file_options(self, dialog):
         """
@@ -469,6 +496,11 @@ class VmoToolsGui:
         if self.options['dxf_out']:
             self.options['smooth_bool'] = dialog.getNextBoolean()
             self.options['smooth_value'] = dialog.getNextNumber()
+        if self.options['perfusion_calc']:
+            self.options['images_per_n'] = dialog.getNextNumber()
+            self.options['starting_image'] = dialog.getNextNumber()
+        if self.options['permeability_calc']:
+            self.options['images_per_n_perm'] = dialog.getNextNumber()
 
         # Handle the new Weka Segmentation options
         if self.options['meas_diam'] or self.options['dxf_out']:
