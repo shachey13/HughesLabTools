@@ -317,7 +317,7 @@ class VmoToolsGui:
         Returns:
             str: The crop type based on the selected option.
         """
-        crop_types = ['same', 'pair', 'individual']
+        crop_types = ['batch', 'grouped', 'individual']
         crop_options = ['Crop using same coordinates', 'Crop each pair', 'Crop each image']
         return crop_types[crop_options.index(selected_option)]
 
@@ -446,6 +446,7 @@ class VmoToolsGui:
             selected_crop_option = dialog.getNextRadioButton()
             self.options['crop_type'] = self._parse_crop_type(selected_crop_option)
             self.options['use_crop'] = dialog.getNextBoolean()
+            print(self.options['crop_type'])
         if self.options['segment']:
             self.options['show_segmented'] = dialog.getNextBoolean()
         if self.options['tumor_weka']:

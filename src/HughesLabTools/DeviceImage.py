@@ -1,8 +1,14 @@
 from ij import IJ, ImagePlus, Prefs, WindowManager
 from ij.plugin.filter import Binary
 from ij.process import FloatProcessor, ImageProcessor
+from ij.gui import Roi, WaitForUserDialog, GenericDialog
+from ij.io import FileSaver
 import os
 from os.path import join, splitext
+from javax.swing import JDialog, JLabel, JButton, Timer
+from java.awt import FlowLayout, Rectangle
+from java.awt.event import ActionListener
+import time
 
 
 class DeviceImage(ImagePlus):
@@ -102,6 +108,131 @@ class DeviceImage(ImagePlus):
         IJ.run(self, "Enhance Contrast...", "saturated={} normalize".format(sat))
         IJ.run(self, color.title(), "")
         IJ.run(self, "RGB Color", "")
+
+    def crop_image(self, crop_type='individual', num_types=1, is_first=False, coordinates=None):
+        self._lazy_load()
+        if not self._loaded:
+            raise IOError("Image not loaded, cannot crop")
+
+        if crop_type not in ['individual', 'batch', 'grouped']:
+            raise ValueError("Invalid crop type. Must be 'individual', 'batch', or 'grouped'")
+
+        crop_folder = self._output_path("crop")
+
+        if crop_type == 'individual' or (crop_type in ['grouped', 'batch'] and is_first):
+            self.open_image_and_set_roi()
+            bounds = self.create_instruction_dialog(crop_type == 'batch')
+            if bounds is None:
+                self.close()
+                return
+        elif crop_type in ['batch', 'grouped'] and not is_first:
+            bounds = Rectangle(*coordinates)
+        else:
+            bounds = Rectangle(*coordinates)
+
+        self._crop_and_save(bounds, crop_folder)
+        self.close()
+
+        # cleanup
+        WindowManager.closeAllWindows()
+
+        if crop_type == 'grouped' and is_first or (crop_type == 'batch' and is_first):
+            return (bounds.x, bounds.y, bounds.width, bounds.height)
+
+    def open_image_and_set_roi(self):
+        self.show()
+        WindowManager.setCurrentWindow(self.getWindow())
+
+        default_crop_width, default_crop_height = 200, 200
+        width, height = self.getWidth(), self.getHeight()
+        midX = int(width / 2 - default_crop_width / 2)
+        midY = int(height / 2 - default_crop_height / 2)
+
+        roi = Roi(midX, midY, default_crop_width, default_crop_height)
+        self.setRoi(roi)
+        self.updateAndDraw()
+        #self.show()
+
+    def create_instruction_dialog(self, is_batch):
+        dialog = JDialog(None, "Adjust ROI", False)
+        dialog.setSize(300, 100)
+        dialog.setLayout(FlowLayout())
+        dialog.setLocationRelativeTo(None)
+        dialog.setAlwaysOnTop(True)
+
+        label = JLabel("Adjust the rectangle ROI in the ImageJ window and click OK to continue.")
+        dialog.add(label)
+
+        ok_button = JButton("OK")
+        cancel_button = JButton("Skip")
+
+        bounds = [None]
+
+        class OKListener(ActionListener):
+            def actionPerformed(self, event):
+                bounds[0] = DeviceImage.set_roi(dialog, is_batch)
+                dialog.dispose()
+
+        class CancelListener(ActionListener):
+            def actionPerformed(self, event):
+                dialog.dispose()
+
+        ok_button.addActionListener(OKListener())
+        cancel_button.addActionListener(CancelListener())
+
+        dialog.add(ok_button)
+        dialog.add(cancel_button)
+        dialog.setVisible(True)
+
+        while dialog.isVisible():
+            time.sleep(0.1)
+
+        return bounds[0]
+
+    @staticmethod
+    def set_roi(dialog, is_batch):
+        imp = WindowManager.getCurrentImage()
+        roi = imp.getRoi()
+        if roi is None:
+            IJ.log("No ROI selected. Exiting cropping.")
+            imp.changes = False
+            imp.close()
+            return None
+
+        bounds = roi.getBounds()
+        IJ.log("Start X: " + str(bounds.x))
+        IJ.log("Start Y: " + str(bounds.y))
+        IJ.log("ROI Width: " + str(bounds.width))
+        IJ.log("ROI Height: " + str(bounds.height))
+
+        if is_batch:
+            DeviceImage.loop_batch_crop(bounds)
+        else:
+            DeviceImage.individual_crop_image(bounds, imp)
+
+        imp.changes = False
+        imp.close()
+
+        return bounds
+
+    @staticmethod
+    def loop_batch_crop(bounds):
+        # Implement batch cropping logic here if needed
+        pass
+
+    @staticmethod
+    def individual_crop_image(bounds, imp):
+        # Individual cropping is handled in _crop_and_save method
+        pass
+
+    def _crop_and_save(self, bounds, crop_folder):
+        roi = Roi(bounds.x, bounds.y, bounds.width, bounds.height)
+        self.setRoi(roi)
+        cropped_imp = self.crop()
+        save_path = os.path.join(crop_folder, self.getTitle())
+        FileSaver(cropped_imp).saveAsTiff(save_path)
+        IJ.log("Cropped and saved: " + save_path)
+        cropped_imp.close()
 
     def duplicate_and_rename(self, suffix):
         """
