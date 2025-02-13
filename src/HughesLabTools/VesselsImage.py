@@ -275,13 +275,13 @@ class VesselImage(DeviceImage):
         expanded_imp, og_imp = self._expand_and_fill(parameters)
         test_imp = expanded_imp.duplicate()
         expanded_imp = self._clean_image(expanded_imp, parameters['image_cleaning_threshold'])
+        cleaned_save_path = join(cleaned_folder, splitext(self.getTitle())[0] + '_cleaned.tif')
+        FileSaver(expanded_imp).saveAsTiff(cleaned_save_path)
 
         # skeletonize and find branches
         IJ.run(expanded_imp, "Skeletonize", "")
         rt_all, rt_unique, branchNumber = self._process_junction_points(expanded_imp, distance_threshold=parameters['distance_threshold'])
         expanded_imp = self._break_branches_and_prune(expanded_imp, rt_all, parameters['mean_threshold'])
-        cleaned_save_path = join(cleaned_folder, splitext(self.getTitle())[0] + '_cleaned2.tif')
-        FileSaver(expanded_imp).saveAsTiff(cleaned_save_path)
         rt_all, rt_unique, branchNumber = self._process_junction_points(expanded_imp, distance_threshold=parameters['distance_threshold'])
 
         # measure diameters
