@@ -173,6 +173,81 @@ class DeviceManager:
         """Run all selected processes based on the options configuration."""
         self.walk_directory_and_add_images()  # Always walk the directory
 
+        # if cropping is selected, running cropping before anything else
+        # it is faster to run cropping all at once than during each step of a loop
+        if self.options.get('crop'):
+            """
+            Crop images based on the specified crop type.
+            
+            :param crop_type: String, one of 'individual', 'batch', or 'grouped'
+            """
+            if self.options.get('crop_type') not in ['individual', 'batch', 'grouped']:
+                raise ValueError("Invalid crop type. Must be 'individual', 'batch', or 'grouped'")
+
+            if self.options.get('crop_type') == 'batch':
+                # For batch cropping, we only need to crop one image and apply to all
+                first_device = self.devices[0]
+                first_image_path = list(first_device.get_image_paths().values())[0]
+                if isinstance(first_image_path, list):
+                    first_image_path = first_image_path[0]
+                first_image = DeviceImage(image_path=first_image_path, verbose=self.verbose)
+                coordinates = first_image.crop_image(crop_type='batch', is_first=True)
+
+                # Apply the same crop to all other images
+                for device in self.devices:
+                    for image_paths in device.get_image_paths().values():
+                        if not isinstance(image_paths, list):
+                            image_paths = [image_paths]
+                        for image_path in image_paths:
+                            if image_path != first_image_path:  # Skip the first image as it's already cropped
+                                image = DeviceImage(image_path=image_path, verbose=self.verbose)
+                                image.crop_image(crop_type='batch', is_first=False, coordinates=coordinates)
+
+            elif self.options.get('crop_type') == 'grouped':
+                # Get all files in the directory
+                all_files = []
+                for device in self.devices:
+                    for image_paths in device.get_image_paths().values():
+                        if isinstance(image_paths, list):
+                            all_files.extend(image_paths)
+                        else:
+                            all_files.append(image_paths)
+
+                # Group the files
+                grouped_files = [all_files[i:i+self.numTypes] for i in range(0, len(all_files), self.numTypes)]
+
+                for group in grouped_files:
+                    # Crop the first file in the group and get the coordinates
+                    first_image = DeviceImage(image_path=group[0], verbose=self.verbose)
+                    coordinates = first_image.crop_image(crop_type='grouped', is_first=True)
+
+                    # Crop the remaining files in the group using the coordinates from the first one
+                    for file_path in group[1:]:
+                        image = DeviceImage(image_path=file_path, verbose=self.verbose)
+                        image.crop_image(crop_type='grouped', is_first=False, coordinates=coordinates)
+
+            else:  # individual cropping
+                for device in self.devices:
+                    for image_paths in device.get_image_paths().values():
+                        if not isinstance(image_paths, list):
+                            image_paths = [image_paths]
+                        for image_path in image_paths:
+                            image = DeviceImage(image_path=image_path, verbose=self.verbose)
+                            image.crop_image(crop_type='individual')
+
+        # change directory to use cropped if selected
+        if self.options.get('use_crop'):
+            # Update the root directory to the 'crop' folder
+            self.rootDir = os.path.join(self.rootDir, 'crop')
+
+            # Clear existing devices and their image paths
+            self.devices = []
+            self.device_dict = {}
+
+            # Re-run walk_directory_and_add_images with the new root directory
+            self.walk_directory_and_add_images()
+
+
         # check if diameter measurements are to be run and create csv
         if self.options.get('meas_diam'):
             output_summary_dir = os.path.join(self.rootDir, 'Vessel_Analysis', 'Summary')
