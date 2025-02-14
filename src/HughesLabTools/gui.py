@@ -437,9 +437,10 @@ class VmoToolsGui:
         dialog.addMessage('Permeability Calculation Options:')
         dialog.setInsets(5, 25, 0)
         dialog.addNumericField("Images per N", 1, 0)
-        # Add any specific options for permeability calculation here
-        # For example:
-        # dialog.addNumericField("Permeability factor:", 1.0, 2)
+        dialog.setInsets(5, 25, 0)
+        dialog.addCheckbox('Manually Align', False)
+        dialog.setInsets(5, 25, 0)
+        dialog.addNumericField("Radius for Measurement Area", 25, 0)
 
     def _add_file_options(self, dialog):
         """
@@ -501,6 +502,8 @@ class VmoToolsGui:
             self.options['starting_image'] = dialog.getNextNumber()
         if self.options['permeability_calc']:
             self.options['images_per_n_perm'] = dialog.getNextNumber()
+            self.options['manual_align'] = dialog.getNextBoolean()
+            self.options['oval_rad'] = dialog.getNextNumber()
 
         # Handle the new Weka Segmentation options
         if self.options['meas_diam'] or self.options['dxf_out']:
