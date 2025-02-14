@@ -463,7 +463,7 @@ class DeviceManager:
 
             # Perform perfusion analysis
             additional_image_paths = group[1:]
-            perfusion_image.perform_permeability_analysis(self.options, additional_images=additional_image_paths)
+            perfusion_image.perform_permeability_analysis(self.options, additional_images=additional_image_paths, oval_radius=self.options['oval_rad'])
 
         # Log if there are any remaining images
         remaining_images = len(all_perfusion_images) % images_per_n
