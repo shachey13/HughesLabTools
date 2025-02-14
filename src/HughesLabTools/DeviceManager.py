@@ -9,6 +9,7 @@ from HughesLabTools.gui import VmoToolsGui, ImageTypeChangerGui
 from HughesLabTools.DeviceImage import  DeviceImage
 from HughesLabTools.VesselsImage import VesselImage
 from HughesLabTools.TumorImage import TumorImage
+from HughesLabTools.PerfusionImage import PerfusionImage
 
 class DeviceManager:
     def __init__(self, rootDir="", numTypes=1, typeNames=None, typeColors=None, verbose=False, options=None):
@@ -397,6 +398,9 @@ class DeviceManager:
                             # Implement measurement logic here (if method is defined)
                             # tumor.measure_circularity()
 
+        if self.options.get('permeability_calc'):
+            self.log("Processing permeability images")
+            self.process_permeability_images()
 
             # Garbage collection
             System.gc()
@@ -420,3 +424,48 @@ class DeviceManager:
             writer.writerow(headers)
 
         return self.summary_csv_path
+
+    def process_permeability_images(self):
+        all_perfusion_images = []
+        for device in self.devices:
+            perfusion_image_paths = device.get_image_paths('Perfusion')
+            if perfusion_image_paths:
+                if isinstance(perfusion_image_paths, list):
+                    all_perfusion_images.extend(perfusion_image_paths)
+                else:
+                    all_perfusion_images.append(perfusion_image_paths)
+
+        if not all_perfusion_images:
+            self.log("No perfusion images found.")
+            return
+
+        # Get the number of images per stack
+        images_per_n = int(self.options.get('images_per_n_perm', 1))
+
+        # Calculate the number of complete groups
+        num_complete_groups = len(all_perfusion_images) // images_per_n
+
+        self.log("Processing {} groups of {} images each".format(num_complete_groups, images_per_n))
+
+        # Process only complete groups
+        for i in range(num_complete_groups):
+            start_index = i * images_per_n
+            end_index = start_index + images_per_n
+            group = all_perfusion_images[start_index:end_index]
+
+            self.log("Processing group {} of {}".format(i+1, num_complete_groups))
+
+            # Load the first image and create a PerfusionImage instance
+            first_image_path = group[0]
+            device_image = DeviceImage(image_path = first_image_path, verbose = self.verbose)
+            device_image._lazy_load()
+            perfusion_image = PerfusionImage.from_image_plus(device_image, verbose=self.verbose)
+
+            # Perform perfusion analysis
+            additional_image_paths = group[1:]
+            perfusion_image.perform_permeability_analysis(self.options, additional_images=additional_image_paths)
+
+        # Log if there are any remaining images
+        remaining_images = len(all_perfusion_images) % images_per_n
+        if remaining_images > 0:
+            self.log("Warning: {} image(s) left unprocessed".format(remaining_images))
