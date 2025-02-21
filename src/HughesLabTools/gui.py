@@ -66,6 +66,29 @@ class VmoToolsGui:
                 IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
                 self.options['use_vessel_weka_segmentation'] = False
 
+        # run perfusion Weka file selection if needed
+        if self.options.get('perfusion_segment', False):
+            od = OpenDialog("Select Weka classifier file for perfusion segmentation", None)
+            weka_file = od.getPath()
+            if weka_file:
+                self.options['perfusion_weka_classifier'] = weka_file
+                IJ.log("Perfusion Weka classifier file selected: " + weka_file)
+            else:
+                IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
+                self.options['perfusion_segment'] = False
+
+        # run permeability Weka file selection if needed
+        if self.options.get('permeability_segment', False):
+            od = OpenDialog("Select Weka classifier file for perfusion segmentation", None)
+            weka_file = od.getPath()
+            if weka_file:
+                self.options['permeability_weka_classifier'] = weka_file
+                IJ.log("Permeability Weka classifier file selected: " + weka_file)
+            else:
+                IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
+                self.options['permeability_segment'] = False
+
+
         if device_manager:
             # Configure the device manager with numTypes, typeNames, and typeColors as attributes
             self._configure_device_manager(device_manager)
@@ -431,6 +454,8 @@ class VmoToolsGui:
         dialog.addNumericField("Images per N", 1, 0)
         dialog.setInsets(5, 25, 0)
         dialog.addNumericField("Starting/Reference Image", 1, 0)
+        dialog.setInsets(5, 25, 0)
+        dialog.addCheckbox('Run Weka Segmentation', False)
 
     def _add_permeability_options(self, dialog):
         dialog.setInsets(25, 20, 0)
@@ -441,6 +466,8 @@ class VmoToolsGui:
         dialog.addCheckbox('Manually Align', False)
         dialog.setInsets(5, 25, 0)
         dialog.addNumericField("Radius for Measurement Area", 25, 0)
+        dialog.setInsets(5, 25, 0)
+        dialog.addCheckbox('Run Weka Segmentation', False)
 
     def _add_file_options(self, dialog):
         """
@@ -500,10 +527,12 @@ class VmoToolsGui:
         if self.options['perfusion_calc']:
             self.options['images_per_n'] = dialog.getNextNumber()
             self.options['starting_image'] = dialog.getNextNumber()
+            self.options['perfusion_segment'] = dialog.getNextBoolean()
         if self.options['permeability_calc']:
             self.options['images_per_n_perm'] = dialog.getNextNumber()
             self.options['manual_align'] = dialog.getNextBoolean()
             self.options['oval_rad'] = dialog.getNextNumber()
+            self.options['permeability_segment'] = dialog.getNextBoolean()
 
         # Handle the new Weka Segmentation options
         if self.options['meas_diam'] or self.options['dxf_out']:
