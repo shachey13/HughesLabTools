@@ -133,28 +133,88 @@ class DeviceManager:
 
         # Determine the number of devices needed
         num_images = len(image_files)
-        if num_images % self.numTypes != 0:
-            self.log("Warning: The number of images is not a multiple of the number of types.")
-            return
+        perfusion_type_index = self.typeNames.index('Perfusion') if 'Perfusion' in self.typeNames else -1
+        print(perfusion_type_index)
 
-        num_devices = num_images // self.numTypes
+        if perfusion_type_index != -1:
+            # Perfusion is one of the image types, so we need to determine images_per_perfusion_sequence
+            images_per_n = self.options.get('images_per_n')
+            images_per_n_perm = self.options.get('images_per_n_perm')
+
+            if images_per_n is not None and images_per_n_perm is not None:
+                if images_per_n != images_per_n_perm:
+                    self.log("Warning: 'images_per_n' and 'images_per_n_perm' are different. Using 'images_per_n_perm' for perfusion images.")
+                images_per_perfusion_sequence = int(images_per_n_perm)
+            elif images_per_n is not None:
+                images_per_perfusion_sequence = int(images_per_n)
+            elif images_per_n_perm is not None:
+                images_per_perfusion_sequence = int(images_per_n_perm)
+            else:
+                self.log("Error: 'images_per_n' or 'images_per_n_perm' must be set when processing perfusion images.")
+                return
+
+            print("Number of images per perfusion sequence:", images_per_perfusion_sequence)
+        else:
+            # No perfusion images, so we don't need images_per_perfusion_sequence
+            images_per_perfusion_sequence = None
+
+        # Calculate images per device
+        if perfusion_type_index != -1:
+            images_per_device = images_per_perfusion_sequence + len(self.typeNames) - 1
+        else:
+            images_per_device = len(self.typeNames)
+
+        print("Number of images per device:", images_per_device)
+
+        print("number of device types")
+        print(self.numTypes)
+
+        # Improved warning message
+        if num_images % images_per_device != 0:
+            self.log("Warning: The number of images ({}) is not a multiple of images per device ({}).".format(
+                num_images, images_per_device))
+            self.log("Some images may be left unprocessed.")
+
+        # Check if there are enough images to create at least one device
+        print(num_images)
+        print(images_per_device)
+        print(images_per_n_perm )
+        print(perfusion_type_index)
+        num_devices = int(num_images // images_per_device)
+        print(num_devices)
+        if num_devices == 0:
+            self.log("Error: Not enough images to create a single device.")
+            return
 
         # Assign images to devices
         for device_idx in range(num_devices):
             device_name = "Device_{}".format(device_idx + 1)
+            start_index = device_idx * images_per_device  # NEW LINE
             # Extract the directory from the first image for this device
-            device_dir = os.path.dirname(image_files[device_idx * self.numTypes])
+            device_dir = os.path.dirname(image_files[start_index])
             self.add_device(device_name, device_dir, self.verbose)
             device = self.device_dict[device_name]
 
-            # Assign the correct image to each type for this device
-            for type_idx, img_type in enumerate(self.typeNames):
-                img_index = device_idx * self.numTypes + type_idx
-                if img_index < num_images:
-                    img_file = image_files[img_index]
-                    device.set_image_paths(image_type=img_type, image_path=img_file)
+            # Assign the correct images to each type for this device
+            current_index = start_index
+            for type_idx, type_name in enumerate(self.typeNames):
+                if type_idx == perfusion_type_index:
+                    end_index = current_index + images_per_perfusion_sequence
+                    type_images = image_files[current_index:end_index]
+                else:
+                    end_index = current_index + 1
+                    type_images = [image_files[current_index]]
+
+                device.set_image_paths(image_type=type_name, image_path=type_images)
+
+                current_index = end_index
 
         self.log("Assigned images to {} devices.".format(num_devices))
+
+        # Log any remaining images
+        remaining_images = num_images % images_per_device
+        if remaining_images > 0:
+            self.log("Warning: {} image(s) left unprocessed.".format(remaining_images))
 
     def _get_sorted_image_files(self, root, files, formats):
         image_files = [os.path.join(root, file) for file in files if self._is_valid_format(file, formats) and not file.startswith('.')]
