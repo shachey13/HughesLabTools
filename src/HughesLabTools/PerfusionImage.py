@@ -17,10 +17,10 @@ class PerfusionImage(DeviceImage):
             super(PerfusionImage, self).__init__(title)
         else:
             super(PerfusionImage, self).__init__()
-        self.oval_radius = 25  # Default ROI radius in pixels
+        #self.oval_radius = self.options['oval_rad']  # Default ROI radius in pixels
         self.roi_manager = RoiManager(False)
 
-    def perform_permeability_analysis(self, options, additional_images=None, output_dir=None):
+    def perform_permeability_analysis(self, options, additional_images=None, output_dir=None, oval_radius=None):
         """
         Perform perfusion analysis on the image stack and save results.
         """
@@ -28,7 +28,7 @@ class PerfusionImage(DeviceImage):
         # Load additional images if they're provided as paths
         loaded_additional_images = [IJ.openImage(path) for path in additional_images]
 
-        self.oval_radius = options.get('oval_radius', self.oval_radius)
+        #self.oval_radius = options.get('oval_radius', self.oval_radius)
         manual_align = options.get('manual_align', False)
 
         # Create output directory
@@ -43,7 +43,7 @@ class PerfusionImage(DeviceImage):
             stack = self.manual_align(stack)
 
         # Set ROIs
-        rois = self.set_rois(stack)
+        rois = self.set_rois(stack, oval_radius=oval_radius)
 
         # Measure ROIs across all slices
         results = self.measure_rois(stack, rois)
@@ -136,7 +136,7 @@ class PerfusionImage(DeviceImage):
 
         return aligned_stack
 
-    def set_rois(self, stack):
+    def set_rois(self, stack, oval_radius):
         """Allow the user to set ROIs on the first slice of the stack."""
         IJ.run(stack, "Select None", "")
         IJ.run("Point Tool...", "type=Hybrid color=Yellow size=Small label")
@@ -155,8 +155,8 @@ class PerfusionImage(DeviceImage):
         rois = []
         self.roi_manager.reset()
         for point in points:
-            oval = OvalRoi(point.x - self.oval_radius, point.y - self.oval_radius,
-                           self.oval_radius * 2, self.oval_radius * 2)
+            oval = OvalRoi(point.x - oval_radius, point.y - oval_radius,
+                           oval_radius * 2, oval_radius * 2)
             rois.append(oval)
             self.roi_manager.addRoi(oval)
 
