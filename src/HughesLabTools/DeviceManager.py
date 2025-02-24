@@ -176,12 +176,7 @@ class DeviceManager:
             self.log("Some images may be left unprocessed.")
 
         # Check if there are enough images to create at least one device
-        print(num_images)
-        print(images_per_device)
-        print(images_per_n_perm )
-        print(perfusion_type_index)
         num_devices = int(num_images // images_per_device)
-        print(num_devices)
         if num_devices == 0:
             self.log("Error: Not enough images to create a single device.")
             return
@@ -507,6 +502,11 @@ class DeviceManager:
 
         self.log("Processing {} groups of {} images each".format(num_complete_groups, images_per_n))
 
+        # load weka segmentation if needed
+        if self.options.get('permeability_segment'):
+            device_image = device._load_image(perfusion_image_paths[0])
+            device_image.prepare_for_segmentation()
+
         # Process only complete groups
         for i in range(num_complete_groups):
             start_index = i * images_per_n
@@ -519,6 +519,29 @@ class DeviceManager:
             first_image_path = group[0]
             device_image = DeviceImage(image_path = first_image_path, verbose = self.verbose)
             device_image._lazy_load()
+
+            # apply weka segmentation if option is selected
+            if self.options.get('permeability_segment'):
+                weka_classifier = self.options.get('permeability_weka_classifier')
+                if weka_classifier:
+                    self.log("Applying Weka segmentation to perfusion image")
+                    device_image.segment_image(weka_classifier, 'Perfusion_Segmented')
+
+                    # Use the segmented image
+                    segmented_folder = os.path.join(os.path.dirname(first_image_path), 'Perfusion_Segmented')
+                    original_filename = os.path.basename(first_image_path)
+                    segmented_filename = os.path.splitext(original_filename)[0] + "-Segment.tif"
+                    segmented_image_path = os.path.join(segmented_folder, segmented_filename)
+
+                    if os.path.exists(segmented_image_path):
+                        self.log("Using Weka segmented image: {}".format(segmented_image_path))
+                        device_image = DeviceImage(image_path=segmented_image_path, verbose=self.verbose)
+                        device_image._lazy_load()
+                    else:
+                        self.log("Warning: Segmented image not found. Using original image.")
+                else:
+                    self.log("Warning: Weka classifier not specified. Using original image.")
+
             perfusion_image = PerfusionImage.from_image_plus(device_image, verbose=self.verbose)
 
             # Perform perfusion analysis
