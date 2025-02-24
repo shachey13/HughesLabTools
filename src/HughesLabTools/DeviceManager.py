@@ -176,12 +176,7 @@ class DeviceManager:
             self.log("Some images may be left unprocessed.")
 
         # Check if there are enough images to create at least one device
-        print(num_images)
-        print(images_per_device)
-        print(images_per_n_perm )
-        print(perfusion_type_index)
         num_devices = int(num_images // images_per_device)
-        print(num_devices)
         if num_devices == 0:
             self.log("Error: Not enough images to create a single device.")
             return
@@ -458,12 +453,17 @@ class DeviceManager:
                             # Implement measurement logic here (if method is defined)
                             # tumor.measure_circularity()
 
-        if self.options.get('permeability_calc'):
-            self.log("Processing permeability images")
-            self.process_permeability_images()
+        if self.options.get('permeability_calc') or self.options.get('perfusion_calc'):
+            self.log("Processing perfusion images")
+            self.process_perfusion_images()
+
+        #if self.options.get('permeability_calc'):
+        #    self.log("Processing permeability images")
+            #self.process_permeability_images()
+        #    self.process_grouped_images('Permeability')
 
             # Garbage collection
-            System.gc()
+        #    System.gc()
 
         self.log("Finished processing all devices.")
 
@@ -485,7 +485,73 @@ class DeviceManager:
 
         return self.summary_csv_path
 
-    def process_permeability_images(self):
+    def apply_weka_segmentation(self, image_paths, analysis_type):
+        """
+        Apply Weka segmentation to all images in the group if the option is selected.
+
+        :param image_paths: list of str, paths to the original images
+        :param analysis_type: str, either 'permeability' or 'perfusion'
+        :return: list of str, paths to segmented images (or original if not segmented)
+        """
+        segment_option = self.options.get('{}_segment'.format(analysis_type))
+        weka_classifier = self.options.get('{}_weka_classifier'.format(analysis_type))
+
+        segmented_image_paths = []
+
+        if segment_option and weka_classifier:
+            self.log("Applying Weka segmentation to {} images".format(analysis_type))
+            for image_path in image_paths:
+                device_image = DeviceImage(image_path=image_path, verbose=self.verbose)
+                device_image._lazy_load()
+                device_image.segment_image(weka_classifier, '{}_Segmented'.format(analysis_type.capitalize()))
+
+                # Use the segmented image
+                segmented_folder = os.path.join(os.path.dirname(image_path), '{}_Segmented'.format(analysis_type.capitalize()))
+                original_filename = os.path.basename(image_path)
+                segmented_filename = os.path.splitext(original_filename)[0] + "-Segment.tif"
+                segmented_image_path = os.path.join(segmented_folder, segmented_filename)
+
+                if os.path.exists(segmented_image_path):
+                    self.log("Using Weka segmented image: {}".format(segmented_image_path))
+                    segmented_image_paths.append(segmented_image_path)
+                else:
+                    self.log("Warning: Segmented image not found. Using original image.")
+                    segmented_image_paths.append(image_path)
+        else:
+            segmented_image_paths = image_paths
+
+        return segmented_image_paths
+
+    def process_image_group(self, group, analysis_type):
+        """
+        Process a group of images for a specific analysis type.
+
+        :param group: list of image paths in the group
+        :param analysis_type: str, either 'permeability' or 'perfusion'
+        """
+        self.log("Processing group for {} analysis".format(analysis_type))
+
+        # Apply Weka segmentation if option is selected
+        segmented_image_paths = self.apply_weka_segmentation(group, analysis_type)
+
+        # Use the first segmented image to create the PerfusionImage instance
+        first_image = DeviceImage(image_path=segmented_image_paths[0], verbose=self.verbose)
+        first_image._lazy_load()
+        perfusion_image = PerfusionImage.from_image_plus(first_image, verbose=self.verbose)
+
+        # Perform analysis based on the analysis type
+        if analysis_type == 'permeability':
+            self.log("Performing permeability analysis")
+            perfusion_image.perform_permeability_analysis(self.options, additional_images=segmented_image_paths[1:], oval_radius=self.options.get('oval_rad'))
+        elif analysis_type == 'perfusion':
+            self.log("Performing regular perfusion analysis")
+            print(segmented_image_paths)
+            perfusion_image.perform_perfusion_analysis(self.options, additional_images=segmented_image_paths)
+
+    def process_perfusion_images(self):
+        """
+        Process perfusion images for both permeability and perfusion analyses if selected.
+        """
         all_perfusion_images = []
         for device in self.devices:
             perfusion_image_paths = device.get_image_paths('Perfusion')
@@ -499,33 +565,46 @@ class DeviceManager:
             self.log("No perfusion images found.")
             return
 
+        # Prepare for segmentation if needed
+        if self.options.get('permeability_segment') or self.options.get('perfusion_segment'):
+            device_image = DeviceImage(image_path=all_perfusion_images[0], verbose=self.verbose)
+            device_image.prepare_for_segmentation()
+
         # Get the number of images per stack
-        images_per_n = int(self.options.get('images_per_n_perm', 1))
+        #images_per_n = int(self.options.get('images_per_n_perm', 1))
+        images_per_n = self.options.get('images_per_n')
+        images_per_n_perm = self.options.get('images_per_n_perm')
 
+        if images_per_n is not None and images_per_n_perm is not None:
+            if images_per_n != images_per_n_perm:
+                self.log("Warning: 'images_per_n' and 'images_per_n_perm' are different. Using 'images_per_n_perm' for perfusion images.")
+                images_per_perfusion_sequence = int(images_per_n_perm)
+        elif images_per_n is not None:
+            images_per_perfusion_sequence = int(images_per_n)
+        elif images_per_n_perm is not None:
+            images_per_perfusion_sequence = int(images_per_n_perm)
+        else:
+            self.log("Error: 'images_per_n' or 'images_per_n_perm' must be set when processing perfusion images.")
+            return
         # Calculate the number of complete groups
-        num_complete_groups = len(all_perfusion_images) // images_per_n
+        num_complete_groups = len(all_perfusion_images) // images_per_perfusion_sequence
 
-        self.log("Processing {} groups of {} images each".format(num_complete_groups, images_per_n))
+        self.log("Processing {} groups of {} images each".format(num_complete_groups, images_per_perfusion_sequence))
 
-        # Process only complete groups
         for i in range(num_complete_groups):
-            start_index = i * images_per_n
-            end_index = start_index + images_per_n
+            start_index = i * images_per_perfusion_sequence
+            end_index = start_index + images_per_perfusion_sequence
             group = all_perfusion_images[start_index:end_index]
 
             self.log("Processing group {} of {}".format(i+1, num_complete_groups))
 
-            # Load the first image and create a PerfusionImage instance
-            first_image_path = group[0]
-            device_image = DeviceImage(image_path = first_image_path, verbose = self.verbose)
-            device_image._lazy_load()
-            perfusion_image = PerfusionImage.from_image_plus(device_image, verbose=self.verbose)
+            if self.options.get('permeability_calc'):
+                self.process_image_group(group, 'permeability')
 
-            # Perform perfusion analysis
-            additional_image_paths = group[1:]
-            perfusion_image.perform_permeability_analysis(self.options, additional_images=additional_image_paths, oval_radius=self.options['oval_rad'])
+            if self.options.get('perfusion_calc'):
+                self.process_image_group(group, 'perfusion')
 
         # Log if there are any remaining images
-        remaining_images = len(all_perfusion_images) % images_per_n
+        remaining_images = len(all_perfusion_images) % images_per_perfusion_sequence
         if remaining_images > 0:
             self.log("Warning: {} image(s) left unprocessed".format(remaining_images))
