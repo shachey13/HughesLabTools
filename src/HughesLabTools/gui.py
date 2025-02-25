@@ -120,8 +120,8 @@ class VmoToolsGui:
 
         dialog.setInsets(15, 10, 0)
         dialog.addMessage('Tumor Image Tools:')
-        tumor_checkbox_labels = ['Segment Tumor Images', 'Segment Tumor Weka', 'Measure Tumor Grey Level', 'Measure Tumor Circularity']
-        dialog.addCheckboxGroup(4, 1, tumor_checkbox_labels, [False] * 4)
+        tumor_checkbox_labels = ['Segment Tumor Images', 'Segment Tumor Weka', 'Subtract Background', 'Measure Tumor Grey Level', 'Measure Tumor Circularity']
+        dialog.addCheckboxGroup(5, 1, tumor_checkbox_labels, [False] * 5)
 
         dialog.setInsets(15, 10, 0)
         dialog.addMessage('Vessel Image Tools:')
@@ -155,6 +155,7 @@ class VmoToolsGui:
         self.options['crop'] = dialog.getNextBoolean()
         self.options['segment'] = dialog.getNextBoolean()
         self.options['tumor_weka'] = dialog.getNextBoolean()
+        self.options['subtract_background'] = dialog.getNextBoolean()
         self.options['meas_grey'] = dialog.getNextBoolean()
         self.options['meas_circ'] = dialog.getNextBoolean()
         self.options['threshold'] = dialog.getNextBoolean()
@@ -288,6 +289,8 @@ class VmoToolsGui:
             self._add_segment_options(dialog)
         if self.options['tumor_weka']:
             self._add_tumor_weka_options(dialog)
+        if self.options['subtract_background']:
+            self._add_tumor_subtract_background(dialog)
         if self.options['threshold']:
             self._add_threshold_options(dialog)
         if self.options['vessel_weka']:
@@ -378,6 +381,18 @@ class VmoToolsGui:
         dialog.addMessage('Segment Tumor Options:')
         dialog.setInsets(5, 25, 0)
         dialog.addCheckbox("Select Weka classifier file", False)
+
+    def _add_tumor_subtract_background(self, dialog):
+        """
+        Adds Subtract Background options to the dialog.
+
+        Args:
+            dialog (GenericDialog): The dialog instance where the Tumor subtract background options will be added.
+        """
+        dialog.setInsets(25, 20, 0)
+        dialog.addMessage('Tumor Subtract Background Options:')
+        dialog.setInsets(5, 25, 0)
+        dialog.addNumericField("Rolling ball radius (pixels):", 50, 0)
 
     def _add_threshold_options(self, dialog):
         """
@@ -506,6 +521,8 @@ class VmoToolsGui:
             self.options['show_segmented'] = dialog.getNextBoolean()
         if self.options['tumor_weka']:
             self.options['use_weka_segmentation'] = dialog.getNextBoolean()
+        if self.options['subtract_background']:
+            self.options['rolling_radius'] = dialog.getNextNumber()
         if self.options['threshold']:
             self.options['show_threshold'] = dialog.getNextBoolean()
         if self.options['vessel_weka']:
