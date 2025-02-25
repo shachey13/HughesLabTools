@@ -208,6 +208,63 @@ class PerfusionImage(DeviceImage):
         for i, roi in enumerate(self.roi_manager.getRoisAsArray()):
             IJ.log("ROI Coordinates {}: {}, {}".format(i+1, roi.getXBase(), roi.getYBase()))
 
+    def perform_perfusion_analysis(self, options, additional_images=None):
+        """
+        Perform perfusion analysis on the image stack and save results.
+        """
+        self._lazy_load()  # Ensure the current image is loaded
+        output_dir = self.output_path("Perfusion")
+
+        # Get the starting image (reference image) from options
+        starting_image = int(options.get('starting_image', 1))   # Convert to 0-based index
+
+        if starting_image < 0 or starting_image >= len(additional_images):
+            self.log("Error: Invalid starting image index.")
+            return
+
+        # The reference image is now selected based on the user input
+        reference_index = starting_image - 1
+        reference_path = additional_images[reference_index]
+        reference_imp = IJ.openImage(reference_path)
+
+        # Create output CSV file
+        output_csv = os.path.join(output_dir, self.getTitle() + "_perfusion_results.csv")
+        with open(output_csv, 'w') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["Image", "Unique Area", "Total Area"])
+
+        # Process each image, skipping the reference image
+        for i, img_path in enumerate(additional_images):
+            self.process_perfusion_image(reference_imp, img_path, output_csv)
+
+        self.log("Perfusion analysis complete. Results saved to %s" % output_csv)
+
+        # Close the reference image
+        reference_imp.changes = False
+        reference_imp.close()
+
+    def process_perfusion_image(self, reference_imp, data_path, output_csv):
+        """
+        Process a single image for perfusion analysis.
+        """
+        data_imp = IJ.openImage(data_path)
+
+        reference_pixels = reference_imp.getProcessor().convertToFloat().getPixels()
+        data_pixels = data_imp.getProcessor().convertToFloat().getPixels()
+
+        dif_img = [ref - data for ref, data in zip(reference_pixels, data_pixels)]
+        dif_img = [0 if val == 255 else 255 if val == -255 else val for val in dif_img]
+
+        unique_area = sum(dif_img) / 255
+        total_area = len(dif_img)
+
+        with open(output_csv, 'a') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([os.path.basename(data_path), unique_area, total_area])
+
+        data_imp.changes = False
+        data_imp.close()
+
     def output_path(self, newDir):
         """
         Check to see if the ImagePlus has a file path. Additionally creates a new directory for saving
