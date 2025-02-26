@@ -1,6 +1,9 @@
 from __future__ import print_function, division, absolute_import
 from ij import IJ, gui
+from ij.gui import GenericDialog
 from ij.io import OpenDialog
+from java.awt import Panel, GridBagLayout, GridBagConstraints, Insets, Dimension, BorderLayout, GridLayout, Label, Choice, TextField, FlowLayout, Checkbox
+from javax.swing import JLabel, JCheckBox, JTextField, JPanel
 
 class VmoToolsGui:
     """
@@ -234,6 +237,366 @@ class VmoToolsGui:
             if show_vessels:
                 dialog.addCheckbox("Vessels", False)
 
+    def _create_image_type_options_panel(self, possible_colors, default_names):
+
+        panel = Panel()
+        panel.setLayout(GridBagLayout())
+        c = GridBagConstraints()
+        c.fill = GridBagConstraints.HORIZONTAL
+        c.insets = Insets(5, 5, 5, 5)
+        c.anchor = GridBagConstraints.NORTHWEST
+
+        self.name_fields = []
+        self.color_choices = []
+
+        num_columns = 3
+        num_rows = (self.num_types + num_columns - 1) // num_columns  # Ceiling division
+
+        for idx in range(self.num_types):
+            col = idx % num_columns
+            row = idx // num_columns
+
+            c.gridx = col * 3  # Multiply by 3 to account for labels, choices, and fields
+            c.gridy = row
+
+            # Add "Image Type N" label
+            panel.add(Label('Image Type: {}'.format(idx + 1)), c)
+
+            c.gridx += 1
+
+            if self.options['color']:
+                # Add Color choice
+                color_choice = Choice()
+                for color in possible_colors:
+                    color_choice.add(color)
+                color_choice.select(possible_colors[idx % len(possible_colors)])
+                panel.add(color_choice, c)
+                self.color_choices.append(color_choice)
+                c.gridx += 1
+            else:
+                self.color_choices.append(None)
+
+            # Add Name field
+            name_field = TextField(default_names[idx % len(default_names)], 10)
+            panel.add(name_field, c)
+            self.name_fields.append(name_field)
+
+        return panel
+
+    # NEW METHOD
+    def _create_tumor_options_panel(self):
+        tumor_options_selected = any([
+            self.options.get('segment', False),
+            self.options.get('tumor_weka', False),
+            self.options.get('subtract_background', False),
+            self.options.get('meas_circ', False),
+            self.options.get('meas_grey', False)
+        ])
+
+        if not tumor_options_selected:
+            return None  # No options selected, so return None
+
+        wrapper_panel = JPanel(BorderLayout())
+        panel = JPanel(GridBagLayout())
+        wrapper_panel.add(panel, BorderLayout.NORTH)
+
+        c = GridBagConstraints()
+        c.fill = GridBagConstraints.HORIZONTAL
+        c.insets = Insets(2, 2, 2, 2)  # top, left, bottom, right padding
+        c.anchor = GridBagConstraints.NORTHWEST
+
+        c.gridx = 0
+        c.gridy = 0
+        c.gridwidth = 2
+        if self.options['segment'] or self.options['tumor_weka'] or self.options['subtract_background'] or self.options['meas_circ']:
+            panel.add(JLabel("Tumor Options:"), c)
+
+        c.gridwidth = 1
+        c.gridy += 1
+
+        if self.options['segment']:
+            c.gridx = 0
+            panel.add(JLabel("Show segmented images:"), c)
+            c.gridx = 1
+            self.show_segmented_checkbox = JCheckBox()
+            panel.add(self.show_segmented_checkbox, c)
+            c.gridy += 1
+
+        if self.options['tumor_weka']:
+            c.gridx = 0
+            panel.add(JLabel("Select Weka classifier file:"), c)
+            c.gridx = 1
+            self.use_weka_segmentation_checkbox = JCheckBox()
+            panel.add(self.use_weka_segmentation_checkbox, c)
+            c.gridy += 1
+
+        if self.options['subtract_background']:
+            c.gridx = 0
+            panel.add(JLabel("Rolling ball radius:"), c)
+            c.gridx = 1
+            self.rolling_radius_field = JTextField("50", 3)
+            self.rolling_radius_field.setMaximumSize(Dimension(50, 20))
+            self.rolling_radius_field.setMinimumSize(Dimension(30, 20))
+            panel.add(self.rolling_radius_field, c)
+            c.gridy += 1
+
+        if self.options['meas_circ']:
+            c.gridx = 0
+            panel.add(JLabel("Circularity Black:"), c)
+            c.gridx = 1
+            self.circ_bp_field = JTextField("0", 3)
+            self.circ_bp_field.setMaximumSize(Dimension(50, 20))
+            self.circ_bp_field.setMinimumSize(Dimension(30, 20))
+            panel.add(self.circ_bp_field, c)
+            c.gridy += 1
+
+            c.gridx = 0
+            panel.add(JLabel("Circularity Min Size:"), c)
+            c.gridx = 1
+            self.circ_st_field = JTextField("50", 3)
+            self.circ_st_field.setMaximumSize(Dimension(50, 20))
+            self.circ_st_field.setMinimumSize(Dimension(30, 20))
+            panel.add(self.circ_st_field, c)
+            c.gridy += 1
+
+            c.gridx = 0
+            panel.add(JLabel("Circularity Max Size:"), c)
+            c.gridx = 1
+            self.circ_lt_field = JTextField("10000", 5)
+            self.circ_lt_field.setMaximumSize(Dimension(50, 20))
+            self.circ_lt_field.setMinimumSize(Dimension(30, 20))
+            panel.add(self.circ_lt_field, c)
+            c.gridy += 1
+
+        if self.options['meas_grey'] or self.options['meas_circ']:
+            c.gridx = 0
+            panel.add(JLabel("Use Weka Segmentation for Tumor:"), c)
+            c.gridx = 1
+            self.use_weka_segmentation_tumor_checkbox = JCheckBox()
+            panel.add(self.use_weka_segmentation_tumor_checkbox, c)
+            c.gridy += 1
+
+        return wrapper_panel
+
+    def _create_vessel_options_panel(self):
+        vessel_options_selected = any([
+            self.options.get('threshold', False),
+            self.options.get('vessel_weka', False),
+            self.options.get('meas_diam', False),
+            self.options.get('dxf_out', False)
+        ])
+
+        if not vessel_options_selected:
+            return None  # No options selected, so return None
+
+        wrapper_panel = JPanel(BorderLayout())
+        panel = JPanel(GridBagLayout())
+        wrapper_panel.add(panel, BorderLayout.NORTH)
+
+        c = GridBagConstraints()
+        c.fill = GridBagConstraints.HORIZONTAL
+        c.insets = Insets(2, 2, 2, 2)
+        c.anchor = GridBagConstraints.NORTHWEST
+
+        c.gridx = 0
+        c.gridy = 0
+        c.gridwidth = 2
+        if self.options['threshold'] or self.options['vessel_weka'] or self.options['meas_diam'] or self.options['dxf_out']:
+            panel.add(JLabel("Vessel Options:"), c)
+
+        c.gridwidth = 1
+        c.gridy += 1
+
+        if self.options['threshold']:
+            c.gridx = 0
+            panel.add(JLabel("Show thresholded images:"), c)
+            c.gridx = 1
+            self.show_threshold_checkbox = JCheckBox()
+            panel.add(self.show_threshold_checkbox, c)
+            c.gridy += 1
+
+        if self.options['vessel_weka']:
+            c.gridx = 0
+            panel.add(JLabel("Select Weka Vessel classifier file:"), c)
+            c.gridx = 1
+            self.use_vessel_weka_checkbox = JCheckBox()
+            panel.add(self.use_vessel_weka_checkbox, c)
+            c.gridy += 1
+
+        if self.options['meas_diam']:
+            c.gridx = 0
+            c.gridwidth = 2
+            panel.add(JLabel("Vessel Measurement Options:"), c)
+            c.gridwidth = 1
+            c.gridy += 1
+
+            options = [
+                ("Hole Threshold:", "50"),
+                ("Area Threshold:", "10"),
+                ("Cleaning Threshold:", "3"),
+                ("Distance Threshold:", "10"),
+                ("Mean Threshold:", "50"),
+            ]
+            fields = []
+
+            for label_text, default_value in options:
+                c.gridx = 0
+                panel.add(JLabel(label_text), c)
+                c.gridx = 1
+                field = JTextField(default_value, 3)
+                field.setMaximumSize(Dimension(50, 20))
+                field.setMinimumSize(Dimension(30, 20))
+                panel.add(field, c)
+                fields.append(field)
+                c.gridy += 1
+
+            # Store references
+            (
+                self.hole_threshold_field,
+                self.area_threshold_field,
+                self.image_cleaning_threshold_field,
+                self.distance_threshold_field,
+                self.mean_threshold_field,
+            ) = fields
+
+            c.gridx = 0
+            panel.add(JLabel("Show settings for each image:"), c)
+            c.gridx = 1
+            self.vessel_settings_checkbox = JCheckBox()
+            panel.add(self.vessel_settings_checkbox, c)
+            c.gridy += 1
+
+        if self.options['dxf_out']:
+            c.gridx = 0
+            panel.add(JLabel("Enable Smoothing:"), c)
+            c.gridx = 1
+            self.smooth_checkbox = JCheckBox()
+            panel.add(self.smooth_checkbox, c)
+            c.gridy += 1
+
+            c.gridx = 0
+            panel.add(JLabel("Smoothing Value:"), c)
+            c.gridx = 1
+            self.smooth_value_field = JTextField("2", 3)
+            self.smooth_value_field.setMaximumSize(Dimension(50, 20))
+            self.smooth_value_field.setMinimumSize(Dimension(30, 20))
+            panel.add(self.smooth_value_field, c)
+            c.gridy += 1
+
+        if self.options['meas_diam'] or self.options['dxf_out']:
+            c.gridx = 0
+            panel.add(JLabel("Use Weka Segmentation for Vessels:"), c)
+            c.gridx = 1
+            self.use_weka_segmentation_vessels_checkbox = JCheckBox()
+            panel.add(self.use_weka_segmentation_vessels_checkbox, c)
+            c.gridy += 1
+
+        return wrapper_panel
+
+    def _create_perfusion_options_panel(self):
+        perfusion_options_selected = any([
+            self.options.get('perfusion_calc', False),
+            self.options.get('permeability_calc', False)
+        ])
+
+        if not perfusion_options_selected:
+            return None  # No options selected, so return None
+
+        wrapper_panel = JPanel(BorderLayout())
+        panel = JPanel(GridBagLayout())
+        wrapper_panel.add(panel, BorderLayout.NORTH)
+
+        c = GridBagConstraints()
+        c.fill = GridBagConstraints.HORIZONTAL
+        c.insets = Insets(2, 2, 2, 2)  # top, left, bottom, right padding
+        c.anchor = GridBagConstraints.NORTHWEST
+
+        c.gridx = 0
+        c.gridy = 0
+        c.gridwidth = 2
+
+        if self.options['perfusion_calc']:
+            panel.add(JLabel("Perfusion Options:"), c)
+            c.gridwidth = 1
+            c.gridy += 1
+
+            # Images per N
+            c.gridx = 0
+            panel.add(JLabel("Images per N:"), c)
+            c.gridx = 1
+            self.images_per_n_field = JTextField("1", 3)
+            self.images_per_n_field.setMaximumSize(Dimension(50, 20))
+            self.images_per_n_field.setMinimumSize(Dimension(30, 20))
+            panel.add(self.images_per_n_field, c)
+            c.gridy += 1
+
+            # Starting/Reference Image
+            c.gridx = 0
+            panel.add(JLabel("Starting/Reference Image:"), c)
+            c.gridx = 1
+            self.starting_image_field = JTextField("1", 3)
+            self.starting_image_field.setMaximumSize(Dimension(50, 20))
+            self.starting_image_field.setMinimumSize(Dimension(30, 20))
+            panel.add(self.starting_image_field, c)
+            c.gridy += 1
+
+            # Run Weka Segmentation
+            c.gridx = 0
+            panel.add(JLabel("Run Weka Segmentation:"), c)
+            c.gridx = 1
+            self.perfusion_segment_checkbox = JCheckBox()
+            panel.add(self.perfusion_segment_checkbox, c)
+            c.gridy += 1
+
+        # Add extra spacing
+        c.gridx = 0
+        c.gridwidth = 2
+        panel.add(JLabel(" "), c)
+        c.gridy += 1
+
+        if self.options['permeability_calc']:
+            c.gridwidth = 2
+            panel.add(JLabel("Permeability Options:"), c)
+            c.gridwidth = 1
+            c.gridy += 1
+
+            # Images per N (Permeability)
+            c.gridx = 0
+            panel.add(JLabel("Images per N (Permeability):"), c)
+            c.gridx = 1
+            self.images_per_n_perm_field = JTextField("1", 3)
+            self.images_per_n_perm_field.setMaximumSize(Dimension(50, 20))
+            self.images_per_n_perm_field.setMinimumSize(Dimension(30, 20))
+            panel.add(self.images_per_n_perm_field, c)
+            c.gridy += 1
+
+            # Manually Align
+            c.gridx = 0
+            panel.add(JLabel("Manually Align:"), c)
+            c.gridx = 1
+            self.manual_align_checkbox = JCheckBox()
+            panel.add(self.manual_align_checkbox, c)
+            c.gridy += 1
+
+            # Radius for Measurement Area
+            c.gridx = 0
+            panel.add(JLabel("Radius for Measurement Area:"), c)
+            c.gridx = 1
+            self.oval_rad_field = JTextField("25", 3)
+            self.oval_rad_field.setMaximumSize(Dimension(50, 20))
+            self.oval_rad_field.setMinimumSize(Dimension(30, 20))
+            panel.add(self.oval_rad_field, c)
+            c.gridy += 1
+
+            # Run Weka Segmentation
+            c.gridx = 0
+            panel.add(JLabel("Run Weka Segmentation:"), c)
+            c.gridx = 1
+            self.permeability_segment_checkbox = JCheckBox()
+            panel.add(self.permeability_segment_checkbox, c)
+
+        return wrapper_panel
+
     def _collect_additional_options(self):
         """
         Collects additional options such as image type names and colors.
@@ -247,15 +610,45 @@ class VmoToolsGui:
 
         type_names, type_colors = [], []
 
-        for i in range(self.num_types):
-            dialog.addMessage('Image Type: ' + str(i + 1))
-            dialog.setInsets(5, 20, 0)
-            if self.options['color']:
-                dialog.addChoice('Color:', possible_colors, possible_colors[i])
-                dialog.addToSameRow()
-            dialog.addStringField('Name:', default_names[i], 10)
+        # Create the custom panel for image types
+        image_type_panel = self._create_image_type_options_panel(possible_colors, default_names)
+        dialog.addPanel(image_type_panel)
 
-        self._add_optional_dialog_sections(dialog)
+        # Add color and merge options
+        self._add_color_merge_options(dialog)
+
+        # Add crop options if enabled
+        if self.options['crop']:
+            dialog.addMessage('Cropping Options:')
+            cropping_methods = ['Crop using same coordinates', 'Crop each pair', 'Crop each image']
+            dialog.addRadioButtonGroup("Select Cropping Method:", cropping_methods, 1, 3, cropping_methods[0])
+            dialog.addCheckbox('Use cropped images', True)
+
+        # Collect the panels that need to be displayed
+        options_panels = []
+
+        tumor_panel = self._create_tumor_options_panel()
+        vessel_panel = self._create_vessel_options_panel()
+        perfusion_panel = self._create_perfusion_options_panel()
+
+        if tumor_panel is not None:
+            options_panels.append(tumor_panel)
+        if vessel_panel is not None:
+            options_panels.append(vessel_panel)
+        if perfusion_panel is not None:
+            options_panels.append(perfusion_panel)
+
+        # Create a Panel with appropriate number of columns
+        num_panels = len(options_panels)
+        if num_panels > 0:
+            panel = Panel()
+            panel.setLayout(GridLayout(1, num_panels, 10, 0))  # 1 row, num_panels columns
+            for p in options_panels:
+                panel.add(p)
+            dialog.addPanel(panel)
+
+        self._add_file_options(dialog)
+        #self._add_optional_dialog_sections(dialog)
 
         dialog.setOKLabel('Next ...')
         dialog.showDialog()
@@ -316,15 +709,30 @@ class VmoToolsGui:
         Args:
             dialog (GenericDialog): The dialog instance where the color and merge options will be added.
         """
-        dialog.setInsets(25, 20, 0)
-        dialog.addMessage('Color and Merge Options:')
-        dialog.setInsets(5, 25, 0)
-        dialog.addCheckbox('Show colored images', self.options.get('show_colored', False))
-        dialog.addToSameRow()
-        dialog.addNumericField('Sat level:', 0.3, 2)
-        if self.options['merge']:
-            dialog.setInsets(5, 25, 0)
-            dialog.addCheckbox('Show merged images', self.options.get('show_merged', False))
+        # Add the message label on its own line
+        if self.options['color'] or self.options['merge']:
+            dialog.addMessage('Color and Merge Options:')
+
+            # Create a custom panel with FlowLayout for the options
+            panel = Panel()
+            panel.setLayout(FlowLayout(FlowLayout.LEFT))
+
+            # Create and add 'Show colored images' checkbox
+            self.show_colored_images_checkbox = Checkbox('Show colored images', self.options.get('show_colored', False))
+            panel.add(self.show_colored_images_checkbox)
+
+            # Create and add 'Sat level' label and text field
+            panel.add(Label('Sat level:'))
+            self.sat_level_field = TextField(str(self.options.get('sat', 0.3)), 5)
+            panel.add(self.sat_level_field)
+
+            # If 'merge' option is enabled, create and add 'Show merged images' checkbox
+            if self.options['merge']:
+                self.show_merged_images_checkbox = Checkbox('Show merged images', self.options.get('show_merged', False))
+                panel.add(self.show_merged_images_checkbox)
+
+            # Add the custom panel to the dialog (options on the line below the label)
+            dialog.addPanel(panel)
 
     def _add_crop_options(self, dialog):
         """
@@ -341,7 +749,7 @@ class VmoToolsGui:
         cropping_methods = ['Crop using same coordinates', 'Crop each pair', 'Crop each image']
         dialog.addRadioButtonGroup("Select Cropping Method:", cropping_methods, 1, 3, cropping_methods[0])
 
-        dialog.setInsets(5, 25, 0)
+        dialog.setInsets(5, 15, 0)
         dialog.addCheckbox('Use cropped images', True)
 
     def _parse_crop_type(self, selected_option):
@@ -491,14 +899,24 @@ class VmoToolsGui:
         Args:
             dialog (GenericDialog): The dialog instance where the file options will be added.
         """
-        dialog.setInsets(25, 20, 0)
         dialog.addMessage('File Options:')
-        dialog.setInsets(5, 25, 0)
-        dialog.addCheckbox('Process images in subdirectories', self.options.get('process_subdirectories', True))
-        dialog.addToSameRow()
-        dialog.addCheckbox('Confirm image types', self.options.get('confirm_image_types', False))
-        dialog.setInsets(5, 25, 0)
-        dialog.addCheckbox('Verbose Logging', self.options.get('verbose', False))
+
+        # Create a panel with FlowLayout to hold the checkboxes
+        panel = Panel()
+        panel.setLayout(FlowLayout(FlowLayout.LEFT))
+
+        # Create and add the checkboxes to the panel
+        self.process_subdirs_checkbox = Checkbox('Process images in subdirectories', self.options.get('process_subdirectories', True))
+        panel.add(self.process_subdirs_checkbox)
+
+        self.confirm_image_types_checkbox = Checkbox('Confirm image types', self.options.get('confirm_image_types', False))
+        panel.add(self.confirm_image_types_checkbox)
+
+        self.verbose_logging_checkbox = Checkbox('Verbose Logging', self.options.get('verbose', False))
+        panel.add(self.verbose_logging_checkbox)
+
+        # Add the panel to the dialog
+        dialog.addPanel(panel)
 
     def _finalize_additional_options(self, dialog):
         """
@@ -507,60 +925,78 @@ class VmoToolsGui:
         Args:
             dialog (GenericDialog): The dialog instance from which final options are retrieved.
         """
+        # Retrieve values from the color and merge options panel
         if self.options['color']:
-            self.options['show_colored'] = dialog.getNextBoolean()
-            self.options['sat'] = dialog.getNextNumber()
+            self.options['show_colored'] = self.show_colored_images_checkbox.getState()
+            try:
+                self.options['sat'] = float(self.sat_level_field.getText())
+            except ValueError:
+                IJ.error("Please enter a valid number for 'Sat level'")
+                return False  # Or handle the error as appropriate
+        else:
+            self.options['show_colored'] = False
+            self.options['sat'] = 0.3  # Default value
+
         if self.options['merge']:
-            self.options['show_merged'] = dialog.getNextBoolean()
+            self.options['show_merged'] = self.show_merged_images_checkbox.getState()
+        else:
+            self.options['show_merged'] = False
+
         if self.options['crop']:
             selected_crop_option = dialog.getNextRadioButton()
             self.options['crop_type'] = self._parse_crop_type(selected_crop_option)
             self.options['use_crop'] = dialog.getNextBoolean()
             print(self.options['crop_type'])
+
+        # process tumor options
         if self.options['segment']:
-            self.options['show_segmented'] = dialog.getNextBoolean()
+            self.options['show_segmented'] = self.show_segmented_checkbox.isSelected()
         if self.options['tumor_weka']:
-            self.options['use_weka_segmentation'] = dialog.getNextBoolean()
+            self.options['use_weka_segmentation'] = self.use_weka_segmentation_checkbox.isSelected()
         if self.options['subtract_background']:
-            self.options['rolling_radius'] = dialog.getNextNumber()
-        if self.options['threshold']:
-            self.options['show_threshold'] = dialog.getNextBoolean()
-        if self.options['vessel_weka']:
-            self.options['use_vessel_weka_segmentation'] = dialog.getNextBoolean()
-        if self.options['meas_diam']:
-            self.options['hole_threshold'] = dialog.getNextNumber()
-            self.options['area_threshold_vessels'] = dialog.getNextNumber()
-            self.options['image_cleaning_threshold'] = dialog.getNextNumber()
-            self.options['distance_threshold'] = dialog.getNextNumber()
-            self.options['mean_threshold'] = dialog.getNextNumber()
-            self.options['vessel_settings'] = dialog.getNextBoolean()
+            self.options['rolling_radius'] = float(self.rolling_radius_field.getText())
         if self.options['meas_circ']:
-            self.options['circ_bp'] = dialog.getNextNumber()
-            self.options['circ_st'] = dialog.getNextNumber()
-            self.options['circ_lt'] = dialog.getNextNumber()
+            self.options['circ_bp'] = float(self.circ_bp_field.getText())
+            self.options['circ_st'] = float(self.circ_st_field.getText())
+            self.options['circ_lt'] = float(self.circ_lt_field.getText())
+
+        # Process vessel options
+        if self.options['threshold']:
+            self.options['show_threshold'] = self.show_threshold_checkbox.isSelected()
+        if self.options['vessel_weka']:
+            self.options['use_vessel_weka_segmentation'] = self.use_vessel_weka_checkbox.isSelected()
+        if self.options['meas_diam']:
+            self.options['hole_threshold'] = float(self.hole_threshold_field.getText())
+            self.options['area_threshold_vessels'] = float(self.area_threshold_field.getText())
+            self.options['image_cleaning_threshold'] = float(self.image_cleaning_threshold_field.getText())
+            self.options['distance_threshold'] = float(self.distance_threshold_field.getText())
+            self.options['mean_threshold'] = float(self.mean_threshold_field.getText())
+            self.options['vessel_settings'] = self.vessel_settings_checkbox.isSelected()
         if self.options['dxf_out']:
-            self.options['smooth_bool'] = dialog.getNextBoolean()
-            self.options['smooth_value'] = dialog.getNextNumber()
+            self.options['smooth_bool'] = self.smooth_checkbox.isSelected()
+            self.options['smooth_value'] = float(self.smooth_value_field.getText())
+
+        # process perfusion options
         if self.options['perfusion_calc']:
-            self.options['images_per_n'] = dialog.getNextNumber()
-            self.options['starting_image'] = dialog.getNextNumber()
-            self.options['perfusion_segment'] = dialog.getNextBoolean()
+            self.options['images_per_n'] = float(self.images_per_n_field.getText())
+            self.options['starting_image'] = float(self.starting_image_field.getText())
+            self.options['perfusion_segment'] = self.perfusion_segment_checkbox.isSelected()
         if self.options['permeability_calc']:
-            self.options['images_per_n_perm'] = dialog.getNextNumber()
-            self.options['manual_align'] = dialog.getNextBoolean()
-            self.options['oval_rad'] = dialog.getNextNumber()
-            self.options['permeability_segment'] = dialog.getNextBoolean()
+            self.options['images_per_n_perm'] = float(self.images_per_n_perm_field.getText())
+            self.options['manual_align'] = self.manual_align_checkbox.isSelected()
+            self.options['oval_rad'] = float(self.oval_rad_field.getText())
+            self.options['permeability_segment'] = self.permeability_segment_checkbox.isSelected()
 
-        # Handle the new Weka Segmentation options
+        # handle weka
         if self.options['meas_diam'] or self.options['dxf_out']:
-            self.options['use_weka_segmentation_vessels'] = dialog.getNextBoolean()
+            self.options['use_weka_segmentation_vessels'] = self.use_weka_segmentation_vessels_checkbox.isSelected()
         if self.options['meas_grey'] or self.options['meas_circ']:
-            self.options['use_weka_segmentation_tumor'] = dialog.getNextBoolean()
+            self.options['use_weka_segmentation_tumor'] = self.use_weka_segmentation_tumor_checkbox.isSelected()
 
-        # Only store operational options in self.options
-        self.options['process_subdirectories'] = dialog.getNextBoolean()
-        self.options['confirm_image_types'] = dialog.getNextBoolean()
-        self.options['verbose'] = dialog.getNextBoolean()
+        # Retrieve values from the checkboxes in the file options panel
+        self.options['process_subdirectories'] = self.process_subdirs_checkbox.getState()
+        self.options['confirm_image_types'] = self.confirm_image_types_checkbox.getState()
+        self.options['verbose'] = self.verbose_logging_checkbox.getState()
 
     def _collect_root_directory(self):
         """
