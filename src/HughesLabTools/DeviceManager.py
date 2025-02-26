@@ -122,7 +122,24 @@ class DeviceManager:
                 dirs[:] = []
 
             # Skip directories named 'colored' or 'merged'
-            dirs[:] = [d for d in dirs if d not in ['colored', 'merged']]
+            skip_dirs = [
+                'Cropped',                # Output from cropping
+                'Vessel_Segmented',       # Output from vessel segmentation
+                'Vessel_Analysis',        # Output from vessel analysis
+                'DXF',                    # Output DXF files
+                'Tumor_Segmented',        # Output from tumor segmentation
+                'subtracted',             # Background subtracted images
+                'measure_gray',           # Tumor gray level measurements
+                'circularity',            # Tumor circularity measurements
+                'merged',                 # Merged images
+                'colored',                # Colored images
+                'Summary',                # Summary CSV files
+                'perfusion',              # Perfusion analysis outputs
+                'permeability',           # Permeability analysis outputs
+                ''
+            ]
+
+            dirs[:] = [d for d in dirs if d not in skip_dirs]
 
             if self.options.get('process_subdirectories', True):
                 self.log("Walking directory and subdirectories: {}".format(root))
