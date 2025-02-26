@@ -225,6 +225,31 @@ class DeviceManager:
         ext = file_name.split('.')[-1].lower()
         return ext in formats
 
+    def get_output_diretory_vessel(self):
+        subdirs = []
+        if self.options.get('use_crop'):
+            subdirs.append('Cropped')
+
+        if self.options.get('use_weka_segmentation_vessel'):
+            subdirs.append('Vessel_Segmented')
+
+        output_dir = os.path.join(self.rootDir, *subdirs)
+        return output_dir
+
+    def get_output_diretory_tumor(self):
+        subdirs = []
+        if self.options.get('use_crop'):
+            subdirs.append('Cropped')
+
+        if self.options.get('use_weka_segmentation_tumor'):
+            subdirs.append('Tumor_Segmented')
+
+        if self.options.get('subtract_background'):
+            subdirs.append('subtracted')
+
+        output_dir = os.path.join(self.rootDir, *subdirs)
+        return output_dir
+
     def run_selected_processes(self):
         """Run all selected processes based on the options configuration."""
         self.walk_directory_and_add_images()  # Always walk the directory
@@ -303,14 +328,29 @@ class DeviceManager:
             # Re-run walk_directory_and_add_images with the new root directory
             self.walk_directory_and_add_images()
 
-
         # check if diameter measurements are to be run and create csv
         if self.options.get('meas_diam'):
-            output_summary_dir = os.path.join(self.rootDir, 'Vessel_Analysis', 'Summary')
+            output_dir = self.get_output_diretory_vessel()
+            output_summary_dir = os.path.join(output_dir, 'Vessel_Analysis', 'Summary')
             if not os.path.exists(output_summary_dir):
                 os.makedirs(output_summary_dir)
             self.create_new_summary_csv(output_summary_dir)
 
+        # check if circiluarity is selected and create csv
+        if self.options.get('meas_circ'):
+            output_dir = self.get_output_diretory_tumor()
+            output_summary_circ_dir = os.path.join(output_dir, 'circularity')
+            if not os.path.exists(output_summary_circ_dir):
+                os.makedirs(output_summary_circ_dir)
+            self.create_new_summary_circ_csv(output_summary_circ_dir)
+
+        # check if tumor gray is selected and create csv
+        if self.options.get('meas_grey'):
+            output_dir = self.get_output_diretory_tumor()
+            output_summary_gray_dir = os.path.join(output_dir, 'measure_gray')
+            if not os.path.exists(output_summary_gray_dir):
+                os.makedirs(output_summary_gray_dir)
+            self.create_new_summary_gray_csv(output_summary_gray_dir)
 
         # Process each device
         for device in self.devices:
@@ -392,7 +432,7 @@ class DeviceManager:
                             vessel.process_dxf(device_manager = self)
 
             # Run Tumor Image processing
-            if self.options.get('segment') or self.options.get('tumor_weka') or self.options.get('meas_grey') or self.options.get('meas_circ'):
+            if self.options.get('segment') or self.options.get('tumor_weka') or self.options.get('meas_grey') or self.options.get('meas_circ') or self.options.get('subtract_background'):
                 self.log("Processing tumor images for device: {}".format(device.name))
                 tumor_image_paths = device.get_image_paths('Tumor')
 
@@ -407,7 +447,10 @@ class DeviceManager:
                         # Load the tumor image
                         tumor_image = device._load_image(tumor_image_path, verbose=self.verbose)
                         # Create a TumorImage instance
-                        tumor = TumorImage(title=tumor_image.getTitle(), img=tumor_image.getProcessor())
+                        #tumor = TumorImage(title=tumor_image.getTitle(), img=tumor_image.getProcessor())
+                        #device_image = device._load_image(segmented_image_path, verbose=self.verbose)
+                        #vessel = VesselImage.from_image_plus(device_image, verbose=self.verbose)
+                        tumor = TumorImage.from_image_plus(tumor_image, verbose = self.verbose)
 
                         # Segment Tumor Images
                         if self.options.get('segment'):
@@ -442,30 +485,77 @@ class DeviceManager:
                             else:
                                 self.log("Warning: Vessel_Segmented folder not found. Using original image: {}".format(tumor_image_path))
 
+                        # subtract background
+                        if self.options.get('subtract_background'):
+                            self.log("Subtracting tumor background for image: {}".format(tumor_image_path))
+                            tumor.subtract_background(radius=self.options.get('rolling_radius'))
+
+                            # use subtracted images downstream
+                            subtacted_folder = os.path.join(os.path.dirname(tumor_image_path), 'subtracted')
+                            if os.path.exists(subtacted_folder):
+                                # Find the corresponding segmented image
+                                original_filename = os.path.basename(tumor_image_path)
+                                subtacted_filename = os.path.splitext(original_filename)[0] + "_subtracted.tif"
+                                subtacted_image_path = os.path.join(subtacted_folder, subtacted_filename)
+
+                                if os.path.exists(subtacted_image_path):
+                                    self.log("Using background subtracted image: {}".format(subtacted_image_path))
+                                    # Create a new instance of device_image and vessel
+                                    tumor_image_path = subtacted_image_path
+                                    tumor_image = device._load_image(subtacted_image_path, verbose=self.verbose)
+                                    tumor = TumorImage.from_image_plus(tumor_image, verbose = self.verbose)
+                                else:
+                                    self.log("Warning: Segmented image not found. Using original image: {}".format(tumor_image_path))
+                            else:
+                                self.log("Warning: Vessel_Segmented folder not found. Using original image: {}".format(tumor_image_path))
+
                         # Measure Tumor Grey Level
                         if self.options.get('meas_grey'):
                             self.log("Measuring tumor grey level for image: {}".format(tumor_image_path))
-                            tumor.measure_tumor_gray()
+                            tumor.measure_tumor_gray(self.summary_csv_gray_path)
 
                         # Measure Tumor Circularity
                         if self.options.get('meas_circ'):
                             self.log("Measuring tumor circularity for image: {}".format(tumor_image_path))
-                            # Implement measurement logic here (if method is defined)
-                            # tumor.measure_circularity()
+                            tumor.measure_circularity(bp = self.options.get('circ_bp'), st = self.options.get('circ_st'), lt = self.options.get('circ_lt'), summary_csv_path = self.summary_csv_circ_path)
 
         if self.options.get('permeability_calc') or self.options.get('perfusion_calc'):
             self.log("Processing perfusion images")
             self.process_perfusion_images()
 
-        #if self.options.get('permeability_calc'):
-        #    self.log("Processing permeability images")
-            #self.process_permeability_images()
-        #    self.process_grouped_images('Permeability')
-
-            # Garbage collection
-        #    System.gc()
-
         self.log("Finished processing all devices.")
+
+    def create_new_summary_circ_csv(self, output_summary_dir):
+        """
+        Create a new CSV file.
+        """
+        #timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.summary_csv_circ_path = os.path.join(output_summary_dir, "quantification_summary_circ.csv")
+
+        # Create an empty file with headers
+        with open(self.summary_csv_circ_path, 'wb') as f:
+            writer = csv.writer(f)
+            # You may need to adjust these headers based on your summary table structure
+            headers = ["Filename","Particle Count",  "Average Area",  "Average %Area", "Average Perim", "Average Circularity", "Average Solidity"]
+            writer.writerow(headers)
+
+        return self.summary_csv_circ_path
+
+    def create_new_summary_gray_csv(self, output_summary_dir):
+        """
+        Create a new CSV file.
+        """
+        #timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.summary_csv_gray_path = os.path.join(output_summary_dir, "quantification_summary_gray.csv")
+
+        # Create an empty file with headers
+        with open(self.summary_csv_gray_path, 'wb') as f:
+            writer = csv.writer(f)
+            # You may need to adjust these headers based on your summary table structure
+            headers = ["Filename", "Mean Gray Value", "Standard Deviation", "Mode", "Min", "Max", "Integrated Density", "Raw Integrated Density", "Min Threshold", "Max Threshold"]
+            writer.writerow(headers)
+
+        return self.summary_csv_gray_path
 
     def create_new_summary_csv(self, output_summary_dir):
         """
