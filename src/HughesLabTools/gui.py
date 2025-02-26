@@ -213,29 +213,6 @@ class VmoToolsGui:
         self.num_types = int(dialog.getNextChoice())  # Store numTypes separately
         return True
 
-    def _add_weka_segmentation_options(self, dialog):
-        """
-        Adds Weka Segmentation options to the dialog if certain conditions are met.
-
-        Args:
-            dialog (GenericDialog): The dialog instance where the Weka Segmentation options will be added.
-        """
-        show_vessels = (self.options['meas_diam'] or self.options['dxf_out'])
-        show_tumor = (self.options['meas_grey'] or self.options['meas_circ'])
-
-        if show_vessels or show_tumor:
-            dialog.setInsets(25, 20, 0)
-            dialog.addMessage('Use Weka Segmentation:')
-
-            dialog.setInsets(5, 25, 0)
-
-            if show_tumor:
-                dialog.addCheckbox("Tumor", False)
-                if show_vessels:
-                    dialog.addToSameRow()
-
-            if show_vessels:
-                dialog.addCheckbox("Vessels", False)
 
     def _create_image_type_options_panel(self, possible_colors, default_names):
 
@@ -648,7 +625,6 @@ class VmoToolsGui:
             dialog.addPanel(panel)
 
         self._add_file_options(dialog)
-        #self._add_optional_dialog_sections(dialog)
 
         dialog.setOKLabel('Next ...')
         dialog.showDialog()
@@ -667,40 +643,6 @@ class VmoToolsGui:
         self._finalize_additional_options(dialog)
         return True
 
-    def _add_optional_dialog_sections(self, dialog):
-        """
-        Adds optional sections to the dialog based on previous choices.
-
-        Args:
-            dialog (GenericDialog): The dialog instance where additional sections will be added.
-        """
-        if self.options['color']:
-            self._add_color_merge_options(dialog)
-        if self.options['crop']:
-            self._add_crop_options(dialog)
-        if self.options['segment']:
-            self._add_segment_options(dialog)
-        if self.options['tumor_weka']:
-            self._add_tumor_weka_options(dialog)
-        if self.options['subtract_background']:
-            self._add_tumor_subtract_background(dialog)
-        if self.options['threshold']:
-            self._add_threshold_options(dialog)
-        if self.options['vessel_weka']:
-            self._add_vessel_weka_options(dialog)
-        if self.options['meas_diam']:
-            self._add_measure_diameter_options(dialog)
-        if self.options['meas_circ']:
-            self._add_circularity_options(dialog)
-        if self.options['dxf_out']:
-            self._add_dxf_options(dialog)
-        if self.options['perfusion_calc']:
-            self._add_perfusion_options(dialog)
-        if self.options['permeability_calc']:
-            self._add_permeability_options(dialog)
-
-        self._add_weka_segmentation_options(dialog)
-        self._add_file_options(dialog)
 
     def _add_color_merge_options(self, dialog):
         """
@@ -734,24 +676,6 @@ class VmoToolsGui:
             # Add the custom panel to the dialog (options on the line below the label)
             dialog.addPanel(panel)
 
-    def _add_crop_options(self, dialog):
-        """
-        Adds cropping options to dialog.
-
-        Args:
-            dialog (GenericDialog): The dialog instance where the color and merge options will be added.
-        """
-        dialog.setInsets(15, 10, 0)
-        dialog.addMessage('Cropping Options:')
-        dialog.setInsets(5, 20, 0)
-
-        # Add a Dropdown (Choice) for Cropping Methods
-        cropping_methods = ['Crop using same coordinates', 'Crop each pair', 'Crop each image']
-        dialog.addRadioButtonGroup("Select Cropping Method:", cropping_methods, 1, 3, cropping_methods[0])
-
-        dialog.setInsets(5, 15, 0)
-        dialog.addCheckbox('Use cropped images', True)
-
     def _parse_crop_type(self, selected_option):
         """
         Helper function to parse the crop type option.
@@ -765,132 +689,6 @@ class VmoToolsGui:
         crop_types = ['batch', 'grouped', 'individual']
         crop_options = ['Crop using same coordinates', 'Crop each pair', 'Crop each image']
         return crop_types[crop_options.index(selected_option)]
-
-    def _add_segment_options(self, dialog):
-        """
-        Adds segment options to the dialog.
-
-        Args:
-            dialog (GenericDialog): The dialog instance where the segment options will be added.
-        """
-        dialog.setInsets(25, 20, 0)
-        dialog.addMessage('Segment Tumor Options:')
-        dialog.setInsets(5, 25, 0)
-        dialog.addCheckbox('Show segmented images', False)
-
-    def _add_tumor_weka_options(self, dialog):
-        """
-        Adds Tumor WekaSegmentation options to the dialog.
-
-        Args:
-            dialog (GenericDialog): The dialog instance where the Tumor WekaSegmentation options will be added.
-        """
-        dialog.setInsets(25, 20, 0)
-        dialog.addMessage('Segment Tumor Options:')
-        dialog.setInsets(5, 25, 0)
-        dialog.addCheckbox("Select Weka classifier file", False)
-
-    def _add_tumor_subtract_background(self, dialog):
-        """
-        Adds Subtract Background options to the dialog.
-
-        Args:
-            dialog (GenericDialog): The dialog instance where the Tumor subtract background options will be added.
-        """
-        dialog.setInsets(25, 20, 0)
-        dialog.addMessage('Tumor Subtract Background Options:')
-        dialog.setInsets(5, 25, 0)
-        dialog.addNumericField("Rolling ball radius (pixels):", 50, 0)
-
-    def _add_threshold_options(self, dialog):
-        """
-        Adds threshold options to the dialog.
-
-        Args:
-            dialog (GenericDialog): The dialog instance where the threshold options will be added.
-        """
-        dialog.setInsets(25, 20, 0)
-        dialog.addMessage('Threshold Vessel Image Options:')
-        dialog.setInsets(5, 25, 0)
-        dialog.addCheckbox('Show thresholded images', False)
-
-    def _add_vessel_weka_options(self, dialog):
-        """
-        Adds Vessel WekaSegmentation options to the dialog.
-
-        Args:
-            dialog (GenericDialog): The dialog instance where the Vessel WekaSegmentation options will be added.
-        """
-        dialog.setInsets(25, 20, 0)
-        dialog.addMessage('Segment Vessel Options:')
-        dialog.setInsets(5, 25, 0)
-        dialog.addCheckbox("Select Weka Vessel classifier file", False)
-
-    def _add_measure_diameter_options(self, dialog):
-        """
-        Adds measure diameter options to the dialog.
-
-        Args:
-            dialog (GenericDialog): The dialog instance where the measure diameter options will be added.
-        """
-        dialog.setInsets(25, 20, 0)
-        dialog.addMessage('Vessel Measurement Options:')
-        dialog.setInsets(5, 25, 0)
-        dialog.addNumericField("Hole Threshold:", 50, 0)
-        dialog.addNumericField("Area Threshold Vessels:", 10, 0)
-        dialog.addNumericField("Image Cleaning Threshold:", 3, 0)
-        dialog.addNumericField("Distance Threshold:", 10, 0)
-        dialog.addNumericField("Mean Threshold:", 50, 0)
-        dialog.addCheckbox('Show settings for each image', False)
-
-    def _add_circularity_options(self, dialog):
-        """
-        Adds circularity options to the dialog.
-
-        Args:
-            dialog (GenericDialog): The dialog instance where the circularity options will be added.
-        """
-        dialog.setInsets(25, 20, 0)
-        dialog.addMessage('Circularity Measurement Options:')
-        dialog.setInsets(5, 25, 0)
-        dialog.addNumericField("Black", 0, 0)
-        dialog.addNumericField("Min Size", 50, 0)
-        dialog.addNumericField("Max Size", 10000, 0)
-
-    def _add_dxf_options(self, dialog):
-        """
-        Adds DXF options to the dialog.
-
-        Args:
-            dialog (GenericDialog): The dialog instance where the circularity options will be added.
-        """
-        dialog.setInsets(25, 20, 0)
-        dialog.addMessage('DXF Output Options:')
-        dialog.setInsets(5, 25, 0)
-        dialog.addCheckbox("Enable Smoothing", False)
-        dialog.addNumericField("Smoothing Value", 2, 0)
-
-    def _add_perfusion_options(self, dialog):
-        dialog.setInsets(25, 20, 0)
-        dialog.addMessage('Perfusion Calculation Options:')
-        dialog.setInsets(5, 25, 0)
-        dialog.addNumericField("Images per N", 1, 0)
-        dialog.setInsets(5, 25, 0)
-        dialog.addNumericField("Starting/Reference Image", 1, 0)
-        dialog.setInsets(5, 25, 0)
-        dialog.addCheckbox('Run Weka Segmentation', False)
-
-    def _add_permeability_options(self, dialog):
-        dialog.setInsets(25, 20, 0)
-        dialog.addMessage('Permeability Calculation Options:')
-        dialog.setInsets(5, 25, 0)
-        dialog.addNumericField("Images per N", 1, 0)
-        dialog.setInsets(5, 25, 0)
-        dialog.addCheckbox('Manually Align', False)
-        dialog.setInsets(5, 25, 0)
-        dialog.addNumericField("Radius for Measurement Area", 25, 0)
-        dialog.setInsets(5, 25, 0)
-        dialog.addCheckbox('Run Weka Segmentation', False)
 
     def _add_file_options(self, dialog):
         """
