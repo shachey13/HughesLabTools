@@ -231,7 +231,7 @@ class VmoToolsGui:
         else:
             dialog.addMessage('How many image types are in the directories you are processing?')
 
-        dialog.addMessage('Examples:\nVessels and Tumors = 2\nVessels, Tumors, and Fibroblasts = 3')
+        dialog.addMessage('Examples:\nVessels and Tumor = 2\nVessels, Tumors, and Perfusion = 3')
         dialog.setInsets(5, 60, 5)
 
         dialog.addChoice('', [str(x + 1) for x in range(6)], '2')
@@ -642,7 +642,7 @@ class VmoToolsGui:
         """
         dialog = gui.GenericDialog('Image Type Names and Colors')
         possible_colors = ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow']
-        default_names = ['Vessels', 'Tumor', 'Fibroblasts', 'Cell 1', 'Cell 2', 'Cell 3']
+        default_names = ['Vessels', 'Tumor', 'Perfusion', 'Cell 1', 'Cell 2', 'Cell 3']
 
         # Create the custom panel for image types
         image_type_panel = self._create_image_type_options_panel(possible_colors, default_names)
