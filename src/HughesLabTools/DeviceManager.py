@@ -123,7 +123,7 @@ class DeviceManager:
 
             # Skip directories named 'colored' or 'merged'
             skip_dirs = [
-                'Cropped',                # Output from cropping
+                'crop',                # Output from cropping
                 'Vessel_Segmented',       # Output from vessel segmentation
                 'Vessel_Analysis',        # Output from vessel analysis
                 'DXF',                    # Output DXF files
@@ -180,11 +180,11 @@ class DeviceManager:
             images_per_device = images_per_perfusion_sequence + len(self.typeNames) - 1
         else:
             images_per_device = len(self.typeNames)
+        self.images_per_device = images_per_device
 
         print("Number of images per device:", images_per_device)
 
-        print("number of device types")
-        print(self.numTypes)
+        print("number of device types:", self.numTypes)
 
         # Improved warning message
         if num_images % images_per_device != 0:
@@ -242,34 +242,46 @@ class DeviceManager:
         ext = file_name.split('.')[-1].lower()
         return ext in formats
 
-    def get_output_diretory_vessel(self):
+    def get_output_directory_vessel(self):
+        return self._get_output_directory(['crop', 'Vessel_Segmented'])
+
+    def get_output_directory_tumor(self):
+        return self._get_output_directory(['crop', 'Tumor_Segmented', 'subtracted'])
+
+    def _get_output_directory(self, possible_subdirs):
+        current_path = self.rootDir
         subdirs = []
-        if self.options.get('use_crop'):
-            subdirs.append('Cropped')
 
-        if self.options.get('use_weka_segmentation_vessel'):
-            subdirs.append('Vessel_Segmented')
+        for subdir in possible_subdirs:
+            if self._should_add_subdir(subdir):
+                current_path, subdirs = self._check_and_add_subdir(current_path, subdirs, subdir)
 
-        output_dir = os.path.join(self.rootDir, *subdirs)
+        output_dir = os.path.join(current_path, *subdirs)
         return output_dir
 
-    def get_output_diretory_tumor(self):
-        subdirs = []
-        if self.options.get('use_crop'):
-            subdirs.append('Cropped')
+    def _should_add_subdir(self, subdir):
+        if subdir == 'crop':
+            return self.options.get('use_crop')
+        elif subdir == 'Vessel_Segmented':
+            return self.options.get('use_weka_segmentation_vessel')
+        elif subdir == 'Tumor_Segmented':
+            return self.options.get('use_weka_segmentation_tumor')
+        elif subdir == 'subtracted':
+            return self.options.get('subtract_background')
+        return False
 
-        if self.options.get('use_weka_segmentation_tumor'):
-            subdirs.append('Tumor_Segmented')
-
-        if self.options.get('subtract_background'):
-            subdirs.append('subtracted')
-
-        output_dir = os.path.join(self.rootDir, *subdirs)
-        return output_dir
+    def _check_and_add_subdir(self, current_path, subdirs, subdir):
+        if subdir not in os.path.normpath(current_path).split(os.sep):
+            if os.path.exists(os.path.join(current_path, subdir)):
+                current_path = os.path.join(current_path, subdir)
+            else:
+                subdirs.append(subdir)
+        return current_path, subdirs
 
     def run_selected_processes(self):
         """Run all selected processes based on the options configuration."""
         self.walk_directory_and_add_images()  # Always walk the directory
+        print("Options:", self.options)
 
         # if cropping is selected, running cropping before anything else
         # it is faster to run cropping all at once than during each step of a loop
@@ -312,7 +324,7 @@ class DeviceManager:
                             all_files.append(image_paths)
 
                 # Group the files
-                grouped_files = [all_files[i:i+self.numTypes] for i in range(0, len(all_files), self.numTypes)]
+                grouped_files = [all_files[i:i+self.images_per_device] for i in range(0, len(all_files), self.images_per_device)]
 
                 for group in grouped_files:
                     # Crop the first file in the group and get the coordinates
@@ -355,7 +367,7 @@ class DeviceManager:
 
         # check if circiluarity is selected and create csv
         if self.options.get('meas_circ'):
-            output_dir = self.get_output_diretory_tumor()
+            output_dir = self.get_output_directory_tumor()
             output_summary_circ_dir = os.path.join(output_dir, 'circularity')
             if not os.path.exists(output_summary_circ_dir):
                 os.makedirs(output_summary_circ_dir)
@@ -363,7 +375,7 @@ class DeviceManager:
 
         # check if tumor gray is selected and create csv
         if self.options.get('meas_grey'):
-            output_dir = self.get_output_diretory_tumor()
+            output_dir = self.get_output_directory_tumor()
             output_summary_gray_dir = os.path.join(output_dir, 'measure_gray')
             if not os.path.exists(output_summary_gray_dir):
                 os.makedirs(output_summary_gray_dir)
