@@ -49,47 +49,79 @@ class VmoToolsGui:
 
         # Add this new step for Weka file selection after root directory selection
         if self.options.get('tumor_weka', False) and self.options.get('use_weka_segmentation', False):
-            od = OpenDialog("Select Weka classifier file for tumor segmentation", None)
-            weka_file = od.getPath()
-            if weka_file:
-                self.options['tumor_weka_classifier'] = weka_file
-                IJ.log("Weka classifier file selected: " + weka_file)
+            # Create and show a GenericDialog
+            gd = GenericDialog("Select Weka Classifier")
+            gd.addMessage("You will now be prompted to select a Weka classifier file for tumor segmentation.")
+            gd.showDialog()
+
+            if gd.wasCanceled():
+                print("User canceled the operation")
             else:
-                IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
-                self.options['use_weka_segmentation'] = False
+                od = OpenDialog("Select Weka classifier file for tumor segmentation", None)
+                weka_file = od.getPath()
+                if weka_file:
+                    self.options['tumor_weka_classifier'] = weka_file
+                    IJ.log("Weka classifier file selected: " + weka_file)
+                else:
+                    IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
+                    self.options['use_weka_segmentation'] = False
 
         # Add this new step for Weka file selection after root directory selection
         if self.options.get('vessel_weka', False) and self.options.get('use_vessel_weka_segmentation', False):
-            od = OpenDialog("Select Weka classifier file for Vessel segmentation", None)
-            weka_file = od.getPath()
-            if weka_file:
-                self.options['vessel_weka_classifier'] = weka_file
-                IJ.log("Vessel Weka classifier file selected: " + weka_file)
+            # Create and show a GenericDialog
+            gd = GenericDialog("Select Weka Classifier")
+            gd.addMessage("You will now be prompted to select a Weka classifier file for vessel segmentation.")
+            gd.showDialog()
+
+            if gd.wasCanceled():
+                print("User canceled the operation")
             else:
-                IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
-                self.options['use_vessel_weka_segmentation'] = False
+                od = OpenDialog("Select Weka classifier file for Vessel segmentation", None)
+                weka_file = od.getPath()
+                if weka_file:
+                    self.options['vessel_weka_classifier'] = weka_file
+                    IJ.log("Vessel Weka classifier file selected: " + weka_file)
+                else:
+                    IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
+                    self.options['use_vessel_weka_segmentation'] = False
 
         # run perfusion Weka file selection if needed
         if self.options.get('perfusion_segment', False):
-            od = OpenDialog("Select Weka classifier file for perfusion segmentation", None)
-            weka_file = od.getPath()
-            if weka_file:
-                self.options['perfusion_weka_classifier'] = weka_file
-                IJ.log("Perfusion Weka classifier file selected: " + weka_file)
+            # Create and show a GenericDialog
+            gd = GenericDialog("Select Weka Classifier")
+            gd.addMessage("You will now be prompted to select a Weka classifier file for perfusion segmentation.")
+            gd.showDialog()
+
+            if gd.wasCanceled():
+                print("User canceled the operation")
             else:
-                IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
-                self.options['perfusion_segment'] = False
+                od = OpenDialog("Select Weka classifier file for perfusion segmentation", None)
+                weka_file = od.getPath()
+                if weka_file:
+                    self.options['perfusion_weka_classifier'] = weka_file
+                    IJ.log("Perfusion Weka classifier file selected: " + weka_file)
+                else:
+                    IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
+                    self.options['perfusion_segment'] = False
 
         # run permeability Weka file selection if needed
         if self.options.get('permeability_segment', False):
-            od = OpenDialog("Select Weka classifier file for perfusion segmentation", None)
-            weka_file = od.getPath()
-            if weka_file:
-                self.options['permeability_weka_classifier'] = weka_file
-                IJ.log("Permeability Weka classifier file selected: " + weka_file)
+            # Create and show a GenericDialog
+            gd = GenericDialog("Select Weka Classifier")
+            gd.addMessage("You will now be prompted to select a Weka classifier file for permeability segmentation.")
+            gd.showDialog()
+
+            if gd.wasCanceled():
+                print("User canceled the operation")
             else:
-                IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
-                self.options['permeability_segment'] = False
+                od = OpenDialog("Select Weka classifier file for perfusion segmentation", None)
+                weka_file = od.getPath()
+                if weka_file:
+                    self.options['permeability_weka_classifier'] = weka_file
+                    IJ.log("Permeability Weka classifier file selected: " + weka_file)
+                else:
+                    IJ.log("No Weka classifier file selected. Weka segmentation will be skipped.")
+                    self.options['permeability_segment'] = False
 
 
         if device_manager:
@@ -215,7 +247,16 @@ class VmoToolsGui:
 
 
     def _create_image_type_options_panel(self, possible_colors, default_names):
+        """
+        Creates a panel for selecting image type names and colors.
 
+        Args:
+            possible_colors (list): A list of color options for the user to choose from.
+            default_names (list): A list of default names for image types.
+
+        Returns:
+            Panel: A Java AWT Panel containing the image type options.
+        """
         panel = Panel()
         panel.setLayout(GridBagLayout())
         c = GridBagConstraints()
@@ -262,6 +303,12 @@ class VmoToolsGui:
 
     # NEW METHOD
     def _create_tumor_options_panel(self):
+        """
+        Creates a panel for tumor analysis options if any tumor-related options are selected.
+
+        Returns:
+            JPanel: A Java Swing JPanel containing tumor analysis options, or None if no options are selected.
+        """
         tumor_options_selected = any([
             self.options.get('segment', False),
             self.options.get('tumor_weka', False),
@@ -356,6 +403,12 @@ class VmoToolsGui:
         return wrapper_panel
 
     def _create_vessel_options_panel(self):
+        """
+        Creates a panel for vessel analysis options if any vessel-related options are selected.
+
+        Returns:
+            JPanel: A Java Swing JPanel containing vessel analysis options, or None if no options are selected.
+        """
         vessel_options_selected = any([
             self.options.get('threshold', False),
             self.options.get('vessel_weka', False),
@@ -471,6 +524,12 @@ class VmoToolsGui:
         return wrapper_panel
 
     def _create_perfusion_options_panel(self):
+        """
+        Creates a panel for perfusion analysis options if any perfusion-related options are selected.
+
+        Returns:
+            JPanel: A Java Swing JPanel containing perfusion analysis options, or None if no options are selected.
+        """
         perfusion_options_selected = any([
             self.options.get('perfusion_calc', False),
             self.options.get('permeability_calc', False)
@@ -584,8 +643,6 @@ class VmoToolsGui:
         dialog = gui.GenericDialog('Image Type Names and Colors')
         possible_colors = ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow']
         default_names = ['Vessels', 'Tumor', 'Fibroblasts', 'Cell 1', 'Cell 2', 'Cell 3']
-
-        type_names, type_colors = [], []
 
         # Create the custom panel for image types
         image_type_panel = self._create_image_type_options_panel(possible_colors, default_names)
@@ -710,7 +767,7 @@ class VmoToolsGui:
         panel.setLayout(FlowLayout(FlowLayout.LEFT))
 
         # Create and add the checkboxes to the panel
-        self.process_subdirs_checkbox = Checkbox('Process images in subdirectories', self.options.get('process_subdirectories', True))
+        self.process_subdirs_checkbox = Checkbox('Process images in subdirectories', self.options.get('process_subdirectories', False))
         panel.add(self.process_subdirs_checkbox)
 
         self.confirm_image_types_checkbox = Checkbox('Confirm image types', self.options.get('confirm_image_types', False))
