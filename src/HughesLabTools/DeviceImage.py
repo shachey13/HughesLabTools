@@ -2,7 +2,7 @@ from ij import IJ, ImagePlus, Prefs, WindowManager
 from ij.plugin.filter import Binary
 from ij.process import FloatProcessor, ImageProcessor
 from ij.gui import Roi, WaitForUserDialog, GenericDialog
-from ij.io import FileSaver
+from ij.io import FileSaver, FileInfo
 import os
 from os.path import join, splitext
 from javax.swing import JDialog, JLabel, JButton, Timer
@@ -15,6 +15,15 @@ class DeviceImage(ImagePlus):
     _trainable_segmentation_available = None
 
     def __init__(self, title=None, img=None, image_path=None, verbose=False):
+        """
+        Initialize a DeviceImage instance.
+
+        Args:
+            title (str, optional): The title of the image.
+            img (ImageProcessor, optional): The image processor.
+            image_path (str, optional): The path to the image file.
+            verbose (bool, optional): Whether to print verbose logs. Defaults to False.
+        """
         self.verbose = verbose
         self.image_path = image_path
         self._loaded = False
@@ -25,14 +34,21 @@ class DeviceImage(ImagePlus):
         else:
             ImagePlus.__init__(self)
 
-    #@classmethod
-    #def from_image_plus(cls, image_plus, verbose=False):
-    #    if not isinstance(image_plus, ImagePlus):
-    #        raise TypeError("Input must be an instance of ImagePlus.")
-    #    return cls(img=image_plus, verbose=verbose)
-
     @classmethod
     def from_image_plus(cls, image_plus, verbose=False):
+        """
+        Create a DeviceImage instance from an ImagePlus object.
+
+        Args:
+            image_plus (ImagePlus): The ImagePlus object to convert.
+            verbose (bool, optional): Whether to print verbose logs. Defaults to False.
+
+        Returns:
+            DeviceImage: A new DeviceImage instance.
+
+        Raises:
+            TypeError: If the input is not an instance of ImagePlus.
+        """
         if not isinstance(image_plus, ImagePlus):
             raise TypeError("Input must be an instance of ImagePlus.")
 
@@ -87,7 +103,6 @@ class DeviceImage(ImagePlus):
                     if img.getFileInfo() is not None:
                         self.setFileInfo(img.getFileInfo())
                     else:
-                        from ij.io import FileInfo
                         fi = FileInfo()
                         fi.fileName = os.path.basename(self.image_path)
                         fi.directory = os.path.dirname(self.image_path) + os.sep  # Ensure directory ends with separator
@@ -101,6 +116,16 @@ class DeviceImage(ImagePlus):
                 raise IOError("INFO: Error loading image from path: {}. Exception: {}".format(self.image_path, str(e)))
 
     def apply_color(self, color, sat=0.3):
+        """
+        Apply a color to the image.
+
+        Args:
+            color (str): The color to apply.
+            sat (float, optional): The saturation level. Defaults to 0.3.
+
+        Raises:
+            IOError: If the image is not loaded.
+        """
         self._lazy_load()
         if not self._loaded:
             raise IOError("Image not loaded, cannot apply color")
@@ -110,6 +135,22 @@ class DeviceImage(ImagePlus):
         IJ.run(self, "RGB Color", "")
 
     def crop_image(self, crop_type='individual', num_types=1, is_first=False, coordinates=None):
+        """
+        Crop the image based on the specified parameters.
+
+        Args:
+            crop_type (str, optional): The type of cropping to perform. Must be 'individual', 'batch', or 'grouped'. Defaults to 'individual'.
+            num_types (int, optional): The number of image types. Defaults to 1.
+            is_first (bool, optional): Whether this is the first image in a batch or group. Defaults to False.
+            coordinates (tuple, optional): The coordinates for cropping (x, y, width, height). Required for batch and grouped cropping when not the first image.
+
+        Returns:
+            tuple: The coordinates of the crop if it's the first image in a batch or group crop.
+
+        Raises:
+            IOError: If the image is not loaded.
+            ValueError: If an invalid crop type is specified.
+        """
         self._lazy_load()
         if not self._loaded:
             raise IOError("Image not loaded, cannot crop")
@@ -205,25 +246,10 @@ class DeviceImage(ImagePlus):
         IJ.log("ROI Width: " + str(bounds.width))
         IJ.log("ROI Height: " + str(bounds.height))
 
-        if is_batch:
-            DeviceImage.loop_batch_crop(bounds)
-        else:
-            DeviceImage.individual_crop_image(bounds, imp)
-
         imp.changes = False
         imp.close()
 
         return bounds
-
-    @staticmethod
-    def loop_batch_crop(bounds):
-        # Implement batch cropping logic here if needed
-        pass
-
-    @staticmethod
-    def individual_crop_image(bounds, imp):
-        # Individual cropping is handled in _crop_and_save method
-        pass
 
     def _crop_and_save(self, bounds, crop_folder):
         roi = Roi(bounds.x, bounds.y, bounds.width, bounds.height)
@@ -258,9 +284,17 @@ class DeviceImage(ImagePlus):
         return thresholded_image
 
     def segment_image(self, selected_file, output_folder):
+        """
+        Segment the image using a Weka classifier and save the result.
+
+        Args:
+            selected_file (str): The path to the Weka classifier file.
+            output_folder (str): The name of the folder to save the segmented image.
+
+        Raises:
+            IOError: If the image is not loaded or if there's an error in saving the segmented image.
+        """
         segment_folder = self._output_path(output_folder)
-        print(segment_folder)
-        self._create_directory_if_needed(segment_folder)
 
         IJ.log("Starting segmentation of image: {}".format(self.getTitle()))
 
@@ -286,7 +320,6 @@ class DeviceImage(ImagePlus):
         result_imp = self._convert_and_invert_binary_255(result_ip)
         segmented_image_path = os.path.join(segment_folder, "{}-Segment.tif".format(os.path.splitext(self.getTitle())[0]))
         IJ.saveAs(result_imp, "Tiff", segmented_image_path)
-        print(segmented_image_path)
 
         # clean up
         IJ.run("Close All")
@@ -325,10 +358,6 @@ class DeviceImage(ImagePlus):
                     result_processor.set(x, y, 255)
         result_imp.setProcessor(result_processor)
         return result_imp
-
-    def _create_directory_if_needed(self, directory):
-        if not os.path.exists(directory):
-            os.makedirs(directory)
 
     def _get_image_type(self):
         processor = self.getProcessor()
