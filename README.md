@@ -4,6 +4,129 @@
 
 The Hughes Lab Tools are designed for processing images captured from VMT (Vascular and Tumor) devices using ImageJ/Fiji. This project leverages ImageJ’s powerful image processing capabilities and integrates custom tools for VMT image analysis, providing a tailored interface for operations such as thresholding, segmentation, and measurement.
 
+## Getting Started
+
+### Installation
+#### For Unix-based systems (macOS, Linux):
+
+1. Download the `hugheslabtools_install.sh` script.
+2. Open a terminal and navigate to the directory containing the script.
+3. Make the script executable: `chmod +x hugheslabtools_install.sh`
+4. Run the script: `./hugheslabtools_install.sh`
+
+#### For Windows:
+
+1. Download the `hugheslabtools_install_windows.ps1` script.
+2. Open PowerShell as administrator.
+3. Navigate to the directory containing the script.
+4. Run the script: `.\hugheslabtools_install_windows.ps1`
+
+Note: You may need to adjust your PowerShell execution policy to run scripts. You can do this by running `Set-ExecutionPolicy RemoteSigned` in an administrator PowerShell window.
+### Explanation of Inputs
+
+The Hughes Lab Tools for VMT Device Image Processing offers a variety of inputs and options to customize the image processing workflow. Here's an explanation of the main inputs:
+
+1. Number of Image Types:
+   - Allows you to specify how many different types of images you're processing (e.g., Tumor, Vessel, Perfusion).
+   - This determines how many color and name options you'll need to set.
+
+2. Image Type Names:
+   - For each image type, you can specify a name (e.g., "Tumor", "Vessel", "Perfusion").
+   - These names are used to organize and identify your images throughout the processing.
+
+3. Image Type Colors:
+   - For each image type, you can assign a color (e.g., Red, Green, Blue).
+   - These colors are used when coloring or merging images.
+
+4. Color and Merge Options:
+   - show_colored: Display colored images (boolean).
+   - sat: Saturation level for coloring (float, default 0.3).
+   - show_merged: Display merged images (boolean).
+
+5. Cropping Options:
+   - crop_type: Method of cropping ('batch', 'grouped', or 'individual').
+     * 'batch': Apply the same crop coordinates to all images.
+     * 'grouped': Apply teh same crop coordinates to groups of images (e.g. all images from one devie)
+     * 'individual': Crop each image individually
+   - use_crop: Whether to use cropped images in subsequent processing (boolean).
+
+6. Tumor Analysis Options:
+   - show_segmented: Display segmented tumor images (boolean).
+   - use_weka_segmentation: Use Weka segmentation for tumors (boolean).
+   - rolling_radius: Radius for background subtraction (float).
+   - circ_bp: Circularity black point for tumor analysis (float).
+   - circ_st: Circularity size threshold (minimum) for tumor analysis (float).
+   - circ_lt: Circularity size threshold (maximum) for tumor analysis (float).
+
+7. Vessel Analysis Options:
+   - show_threshold: Display thresholded vessel images (boolean).
+   - use_vessel_weka_segmentation: Use Weka segmentation for vessels (boolean).
+   - hole_threshold: Threshold for hole filling in vessel analysis (float).
+   - area_threshold_vessels: Area threshold for vessel analysis (float).
+   - image_cleaning_threshold: Threshold for image cleaning in vessel analysis (float).
+   - distance_threshold: Distance threshold for vessel analysis (float).
+   - mean_threshold: Mean intensity threshold for vessel analysis (float).
+   - vessel_settings: Show settings for each vessel image (boolean).
+   - smooth_bool: Enable smoothing for DXF export (boolean).
+   - smooth_value: Smoothing value for DXF export (float).
+
+8. Perfusion Analysis Options:
+   - images_per_n: Number of images per perfusion sequence (float).
+   - starting_image: Index of the starting/reference image (float).
+   - perfusion_segment: Perform segmentation for perfusion analysis (boolean).
+   - images_per_n_perm: Number of images per permeability sequence (float).
+   - manual_align: Enable manual alignment for permeability analysis (boolean).
+   - oval_rad: Radius of measurement area for permeability analysis (float).
+   - permeability_segment: Perform segmentation for permeability analysis (boolean).
+
+9. Weka Segmentation Options:
+   - use_weka_segmentation_vessels: Use Weka segmentation for vessel diameter measurement or DXF export (boolean).
+   - use_weka_segmentation_tumor: Use Weka segmentation for tumor grey level or circularity measurement (boolean).
+
+10. File Processing Options:
+   - process_subdirectories: Process images in subdirectories (boolean).
+   - confirm_image_types: Prompt user to confirm image types before processing (boolean).
+   - verbose: Enable verbose logging for detailed process information (boolean).
+
+## Dependencies
+
+1. **Shape Smoothing Plugin** for ImageJ/Fiji:
+   - Add new methods in the relevant image class (e.g., `TumorImage` or `VesselImage`).
+   - Ensure the new methods are integrated into the image processing workflow.
+   - **Download Link:** [Shape Smoothing Plugin](https://imagej.net/plugins/shape-smoothing)
+   - **Description:** The Shape Smoothing plugin performs Fourier smoothing on binary images to reduce the number of vertices and smooth object boundaries.
+
+### Shape Smoothing Plugin Installation
+
+The **Shape Smoothing** plugin is required for the shape smoothing functionality in this project. Please follow the steps below to download and install the plugin:
+
+1. **Download the Shape Smoothing Plugin:**
+
+   - Visit the [Shape Smoothing plugin page](https://imagej.net/plugins/shape-smoothing).
+   - Download the latest version of the plugin, typically provided as a `.jar` or `.class` file.
+
+2. **Install the Plugin in ImageJ/Fiji:**
+
+   - Locate your ImageJ or Fiji installation directory.
+   - Find the `plugins` folder within the installation directory.
+      - For **ImageJ**: This may be in `C:\ImageJ\plugins` (Windows) or `/Applications/ImageJ/plugins` (macOS).
+      - For **Fiji**: This may be in `C:\Fiji.app\plugins` (Windows) or `/Applications/Fiji.app/plugins` (macOS).
+   - Copy the downloaded plugin file (`Shape_Smoothing.jar` or `Shape_Smoothing.class`) into the `plugins` folder.
+   - **Optional:** You can create a subfolder within `plugins` (e.g., `plugins/ShapeTools`) and place the plugin there for better organization.
+
+3. **Restart ImageJ/Fiji:**
+
+   - Close any running instances of ImageJ or Fiji.
+   - Launch ImageJ or Fiji again to load the new plugin.
+
+4. **Verify the Plugin Installation:**
+
+   - In ImageJ/Fiji, go to `Plugins` in the menu bar.
+   - Look for `Shape Smoothing` in the list. If it's in a subfolder, navigate to the appropriate submenu.
+   - If the plugin appears in the menu, it's installed correctly.
+
+**Note:** Ensure you have the latest version of ImageJ or Fiji for compatibility.
+
 ## Project Structure and Key Classes
 
 ### **Device Class**
@@ -138,47 +261,6 @@ If you encounter any problems, have feature requests, or want to track todos, pl
 ## Contribution
 
 Fork the repository, implement your features or fixes, and submit a pull request. Ensure that your code is well-documented and thoroughly tested.
-
-## Dependencies
-
-1. **Shape Smoothing Plugin** for ImageJ/Fiji:
-   - Add new methods in the relevant image class (e.g., `TumorImage` or `VesselImage`).
-   - Ensure the new methods are integrated into the image processing workflow.
-   - **Download Link:** [Shape Smoothing Plugin](https://imagej.net/plugins/shape-smoothing)
-   - **Description:** The Shape Smoothing plugin performs Fourier smoothing on binary images to reduce the number of vertices and smooth object boundaries.
-
-## Installation
-
-### Shape Smoothing Plugin
-
-The **Shape Smoothing** plugin is required for the shape smoothing functionality in this project. Please follow the steps below to download and install the plugin:
-
-1. **Download the Shape Smoothing Plugin:**
-
-   - Visit the [Shape Smoothing plugin page](https://imagej.net/plugins/shape-smoothing).
-   - Download the latest version of the plugin, typically provided as a `.jar` or `.class` file.
-
-2. **Install the Plugin in ImageJ/Fiji:**
-
-   - Locate your ImageJ or Fiji installation directory.
-   - Find the `plugins` folder within the installation directory.
-     - For **ImageJ**: This may be in `C:\ImageJ\plugins` (Windows) or `/Applications/ImageJ/plugins` (macOS).
-     - For **Fiji**: This may be in `C:\Fiji.app\plugins` (Windows) or `/Applications/Fiji.app/plugins` (macOS).
-   - Copy the downloaded plugin file (`Shape_Smoothing.jar` or `Shape_Smoothing.class`) into the `plugins` folder.
-   - **Optional:** You can create a subfolder within `plugins` (e.g., `plugins/ShapeTools`) and place the plugin there for better organization.
-
-3. **Restart ImageJ/Fiji:**
-
-   - Close any running instances of ImageJ or Fiji.
-   - Launch ImageJ or Fiji again to load the new plugin.
-
-4. **Verify the Plugin Installation:**
-
-   - In ImageJ/Fiji, go to `Plugins` in the menu bar.
-   - Look for `Shape Smoothing` in the list. If it's in a subfolder, navigate to the appropriate submenu.
-   - If the plugin appears in the menu, it's installed correctly.
-
-**Note:** Ensure you have the latest version of ImageJ or Fiji for compatibility.
 
 ## License
 
