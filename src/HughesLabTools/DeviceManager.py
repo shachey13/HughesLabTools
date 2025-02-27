@@ -390,8 +390,12 @@ class DeviceManager:
 
         # check if diameter measurements are to be run and create csv
         if self.options.get('meas_diam'):
-            output_dir = self.get_output_diretory_vessel()
-            output_summary_dir = os.path.join(output_dir, 'Vessel_Analysis', 'Summary')
+            if self.options.get('use_vessel_weka_segmentation'):
+                output_dir = self.get_output_directory_vessel()
+                output_summary_dir = os.path.join(output_dir, 'Vessel_Segmented', 'Vessel_Analysis', 'Summary')
+            else:
+                output_dir = self.get_output_directory_vessel()
+                output_summary_dir = os.path.join(output_dir, 'Vessel_Analysis', 'Summary')
             if not os.path.exists(output_summary_dir):
                 os.makedirs(output_summary_dir)
             self.create_new_summary_csv(output_summary_dir)
