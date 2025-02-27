@@ -632,13 +632,19 @@ class VmoToolsGui:
         if dialog.wasCanceled():
             return False
 
+        # Retrieve values from custom components
+        self.type_names = []
+        self.type_colors = []
         for i in range(self.num_types):
-            type_names.append(dialog.getNextString())
-            type_colors.append(dialog.getNextChoice())
-
-        # Store these directly in the DeviceManager (or wherever you want to store them)
-        self.type_names = type_names
-        self.type_colors = type_colors
+            name = self.name_fields[i].getText().strip()
+            if not name:
+                IJ.error("Please enter a name for all image types")
+                return False
+            self.type_names.append(name)
+            if self.color_choices[i]:
+                self.type_colors.append(self.color_choices[i].getSelectedItem())
+            else:
+                self.type_colors.append(None)
 
         self._finalize_additional_options(dialog)
         return True
