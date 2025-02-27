@@ -12,7 +12,26 @@ from HughesLabTools.TumorImage import TumorImage
 from HughesLabTools.PerfusionImage import PerfusionImage
 
 class DeviceManager:
+    """
+    Manages devices and their associated images for various image processing tasks.
+
+    This class handles the configuration, processing, and analysis of multiple devices
+    and their corresponding images. It provides methods for GUI configuration, directory
+    walking, image processing, and various analysis tasks.
+    """
+
     def __init__(self, rootDir="", numTypes=1, typeNames=None, typeColors=None, verbose=False, options=None):
+        """
+        Initialize a DeviceManager instance.
+
+        Args:
+            rootDir (str): Root directory for image processing.
+            numTypes (int): Number of image types.
+            typeNames (list): Names of image types.
+            typeColors (list): Colors associated with image types.
+            verbose (bool): Whether to print verbose logs.
+            options (dict): Additional options for image processing.
+        """
         # Default settings
         self.devices = []
         self.device_dict = {}
@@ -111,6 +130,13 @@ class DeviceManager:
         print_dict(self.options, indent=2)
 
     def walk_directory_and_add_images(self, formats=None):
+        """
+         Walk through the root directory, identify image files, and add them to devices.
+
+         Args:
+             formats (list): List of image file formats to consider (default: ['tif', 'tiff']).
+         """
+
         if formats is None:
             formats = ['tif', 'tiff']
 
@@ -279,7 +305,12 @@ class DeviceManager:
         return current_path, subdirs
 
     def run_selected_processes(self):
-        """Run all selected processes based on the options configuration."""
+        """
+         Run all selected image processing tasks based on the current configuration.
+
+         This method orchestrates the execution of various image processing tasks including
+         cropping, coloring, merging, vessel analysis, tumor analysis, and perfusion analysis.
+         """
         self.walk_directory_and_add_images()  # Always walk the directory
         print("Options:", self.options)
 
@@ -454,7 +485,6 @@ class DeviceManager:
                             self.log("Measuring vessel diameter for image: {}".format(vessel_image_path))
                             # Implement measurement logic here (if method is defined)
                             vessel.perform_vessel_analysis(options = self.options, summary_csv_path=self.summary_csv_path)
-                            # vessel.measure_diameter()
 
                         if self.options.get('dxf_out'):
                             self.log("Running dxf for device: {}".format(device.name))
@@ -476,9 +506,6 @@ class DeviceManager:
                         # Load the tumor image
                         tumor_image = device._load_image(tumor_image_path, verbose=self.verbose)
                         # Create a TumorImage instance
-                        #tumor = TumorImage(title=tumor_image.getTitle(), img=tumor_image.getProcessor())
-                        #device_image = device._load_image(segmented_image_path, verbose=self.verbose)
-                        #vessel = VesselImage.from_image_plus(device_image, verbose=self.verbose)
                         tumor = TumorImage.from_image_plus(tumor_image, verbose = self.verbose)
 
                         # Segment Tumor Images
