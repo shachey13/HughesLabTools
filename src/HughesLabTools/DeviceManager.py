@@ -4,6 +4,7 @@ import re
 import csv
 from java.lang import System
 from ij import IJ, ImagePlus
+from ij.gui import GenericDialog
 from HughesLabTools.Device import Device
 from HughesLabTools.gui import VmoToolsGui, ImageTypeChangerGui
 from HughesLabTools.DeviceImage import  DeviceImage
@@ -584,6 +585,11 @@ class DeviceManager:
             self.process_perfusion_images()
 
         self.log("Finished processing all devices.")
+
+        # Create and show the completion dialog
+        gd = GenericDialog("Processing Complete")
+        gd.addMessage("Finished processing all devices. Good luck with your science!")
+        gd.showDialog()
 
     def create_new_summary_circ_csv(self, output_summary_dir):
         """
