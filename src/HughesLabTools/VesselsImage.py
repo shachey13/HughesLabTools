@@ -55,7 +55,6 @@ class VesselImage(DeviceImage):
         # save file
         output_path = join(output_dir, splitext(self.getTitle())[0] + '_thresholded.jpg')
         IJ.save(imp2, output_path)
-        #self.save(output_path)
 
         # Verbose logging
         if device_manager.verbose:
@@ -290,7 +289,6 @@ class VesselImage(DeviceImage):
         _ , average_values = self._break_branches_and_analyze(output_imp, rt_all)
 
         # compute area
-        #og_imp = self.duplicate()
         og_imp = self._custom_binarize(og_imp, 200)
         resultsArea = self._area_and_perimeter(og_imp)
 
@@ -554,8 +552,6 @@ class VesselImage(DeviceImage):
         pa.setRoiManager(roi_manager)
         pa.analyze(modified_imp)
         hole_rois = roi_manager.getRoisAsArray()
-
-        #self.show()
 
         for i in range(rt_segments.size()):
             mean_val = rt_segments.getValue("Area", i)
