@@ -231,7 +231,7 @@ class VmoToolsGui:
         else:
             dialog.addMessage('How many image types are in the directories you are processing?')
 
-        dialog.addMessage('Examples:\nVessels and Tumor = 2\nVessels, Tumors, and Perfusion = 3')
+        dialog.addMessage('Examples:\nVessels and Tumor = 2\nVessels, Tumor, and Perfusion = 3')
         dialog.setInsets(5, 60, 5)
 
         dialog.addChoice('', [str(x + 1) for x in range(6)], '2')

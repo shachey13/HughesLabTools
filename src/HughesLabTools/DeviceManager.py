@@ -195,7 +195,8 @@ class DeviceManager:
                 images_per_perfusion_sequence = int(images_per_n_perm)
             else:
                 self.log("Error: 'images_per_n' or 'images_per_n_perm' must be set when processing perfusion images.")
-                return
+                images_per_perfusion_sequence = 1
+                #return
 
             print("Number of images per perfusion sequence:", images_per_perfusion_sequence)
         else:
