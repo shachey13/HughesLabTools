@@ -16,12 +16,21 @@ The Hughes Lab Tools are designed for processing images captured from VMT (Vascu
 
 #### For Windows:
 
+1. On the GitHub repository page, click the green "Code" button and select "Download ZIP".
+2. Unzip the downloaded file to a temporary location.
+3. Navigate to your FIJI installation directory on your computer.
+4. In the FIJI directory, create a new folder called "Lib" inside the "jars" folder if it doesn't already exist.
+5. Copy the contents of the unzipped "HughesLabTools" folder into the "Lib" folder you just created.
+6. In the FIJI main directory, navigate to the "scripts" folder. If it doesn't exist, create it.
+7. Copy the contents of the unzipped "HughesLabTools" folder into the "scripts" folder.
+   
+##### For advanced Windows Users:
 1. Download the `hugheslabtools_install_windows.ps1` script.
 2. Open PowerShell as administrator.
 3. Navigate to the directory containing the script.
 4. Run the script: `.\hugheslabtools_install_windows.ps1`
 
-Note: You may need to adjust your PowerShell execution policy to run scripts. You can do this by running `Set-ExecutionPolicy RemoteSigned` in an administrator PowerShell window.
+Note: You may need to adjust your PowerShell execution policy to run scripts. You can do this by running `Set-ExecutionPolicy RemoteSigned` in an administrator PowerShell window. You also need to have git installed.
 ### Explanation of Inputs
 
 The Hughes Lab Tools for VMT Device Image Processing offers a variety of inputs and options to customize the image processing workflow. Here's an explanation of the main inputs:
