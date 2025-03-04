@@ -14,6 +14,12 @@ The Hughes Lab Tools are designed for processing images captured from VMT (Vascu
 3. Make the script executable: `chmod +x hugheslabtools_install.sh`
 4. Run the script: `./hugheslabtools_install.sh`
 
+   **Note:** You may need to modify the `FIJI_DIR` variable in the script to match your Fiji installation directory. By default, it is set to `/Applications/Fiji.app`. Edit this line in the script if your Fiji is installed elsewhere:
+
+```bash
+FIJI_DIR="/Applications/Fiji.app"
+```
+
 #### For Windows:
 
 1. On the GitHub repository page, click the green "Code" button and select "Download ZIP".
@@ -29,6 +35,12 @@ The Hughes Lab Tools are designed for processing images captured from VMT (Vascu
 2. Open PowerShell as administrator.
 3. Navigate to the directory containing the script.
 4. Run the script: `.\hugheslabtools_install_windows.ps1`
+
+   **Note:** You may need to modify the `FIJI_DIR` variable in the script to match your Fiji installation directory. By default, it is set to `\Program Files\Fiji.app`. Edit this line in the script if your Fiji is installed elsewhere:
+
+```bash
+$FIJI_DIR = "C:\Program Files\Fiji.app"
+```
 
 Note: You may need to adjust your PowerShell execution policy to run scripts. You can do this by running `Set-ExecutionPolicy RemoteSigned` in an administrator PowerShell window. You also need to have git installed.
 ### Explanation of Inputs
