@@ -34,7 +34,10 @@ class Device:
         elif image_type and image_paths and isinstance(image_paths, list):
             self._set_image_paths_from_list(image_type, image_paths)
         elif image_type and image_path:
-            self._set_image_path(image_type, image_path)
+            if isinstance(image_path, list):
+                self._set_image_paths_from_list(image_type, image_path)
+            else:
+                self._set_image_path(image_type, image_path)
         self.log("Set image path for {}: {}".format(image_type, self.image_paths[image_type]))
 
     def _set_image_paths_from_dict(self, image_paths):
