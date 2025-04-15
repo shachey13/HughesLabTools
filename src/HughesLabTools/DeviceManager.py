@@ -198,14 +198,10 @@ class DeviceManager:
                     vessel_image_paths = vessel_image_paths if isinstance(vessel_image_paths, list) else [vessel_image_paths]
                     for vessel_image_path in vessel_image_paths:
                         self.log("Processing vessel image: {}".format(vessel_image_path))
-                        # Load the vessel image
-                        #vessel_image = device._load_image(vessel_image_path, verbose=self.verbose)
-                        #self.log(type(vessel_image))
-                        # Create a VesselImage instance
-                        #vessel = VesselImage(title=vessel_image.getTitle(), img=vessel_image.getProcessor(),
-                        #                     image_path = vessel_image_path, verbose = self.verbose)
+
+                        # Load the image and create a VesselImage instance
                         device_image = device._load_image(vessel_image_path, verbose=self.verbose)
-                        vessel = VesselImage(image_plus=device_image, verbose=self.verbose)
+                        vessel = VesselImage.from_image_plus(device_image, verbose=self.verbose)
 
                         # Threshold Vessel Images
                         if self.options.get('threshold'):
@@ -222,7 +218,6 @@ class DeviceManager:
 
                         if self.options.get('dxf_out'):
                             self.log("Running dxf for device: {}".format(device.name))
-                            #vessel.process_dxf(device_manager = self.options)
                             vessel.process_dxf(device_manager = self)
 
             # Run Tumor Image processing

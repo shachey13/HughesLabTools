@@ -284,7 +284,7 @@ class VmoToolsGui:
         dialog.addMessage('DXF Output Options:')
         dialog.setInsets(5, 25, 0)
         dialog.addCheckbox("Enable Smoothing", False)
-        dialog.addNumericField("Smoothing Value", 0, 0)
+        dialog.addNumericField("Smoothing Value", 2, 0)
 
 
     def _add_file_options(self, dialog):
