@@ -28,7 +28,7 @@ FIJI_DIR="/Applications/Fiji.app"
 4. In the FIJI directory, create a new folder called "Lib" inside the "jars" folder if it doesn't already exist.
 5. In the HughesLabTools-main, go to the src folder and then copy the contents of the "HughesLabTools" folder into the "Lib" folder you just created.
 6. In the FIJI main directory, navigate to the "scripts" folder. If it doesn't exist, create it.
-7. Copy the contents of the same "HughesLabTools" folder from step 5 into the "scripts" folder.
+7. Go to the "HughesLabTools" folder from step 5 and copy the "main_.py" file. Paste the file into the "scripts" folder.
    
 ##### For advanced Windows Users:
 1. Download the `hugheslabtools_install_windows.ps1` script.
