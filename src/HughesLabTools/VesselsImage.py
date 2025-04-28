@@ -53,8 +53,8 @@ class VesselImage(DeviceImage):
         output_dir = self.output_path('Vessel_Thresholded')
 
         # save file
-        output_path = join(output_dir, splitext(self.getTitle())[0] + '_thresholded.jpg')
-        IJ.save(imp2, output_path)
+        output_path = join(output_dir, splitext(self.getTitle())[0] + '_thresholded.tif')
+        FileSaver(imp2).saveAsTiff(output_path)
 
         # Verbose logging
         if device_manager.verbose:

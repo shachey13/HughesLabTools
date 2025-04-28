@@ -273,7 +273,7 @@ class DeviceManager:
         return ext in formats
 
     def get_output_directory_vessel(self):
-        return self._get_output_directory(['crop', 'Vessel_Segmented'])
+        return self._get_output_directory(['crop', 'Vessel_Segmented', 'Vessel_Thresholded'])
 
     def get_output_directory_tumor(self):
         return self._get_output_directory(['crop', 'Tumor_Segmented_Weka', 'subtracted'])
@@ -294,6 +294,8 @@ class DeviceManager:
             return self.options.get('use_crop')
         elif subdir == 'Vessel_Segmented':
             return self.options.get('use_weka_segmentation_vessel')
+        elif subdir == 'Vessel_Thresholded':
+            return self.options.get('use_vessel_thresholded')
         elif subdir == 'Tumor_Segmented_Weka':
             return self.options.get('use_weka_segmentation_tumor')
         elif subdir == 'subtracted':
@@ -394,11 +396,12 @@ class DeviceManager:
 
         # check if diameter measurements are to be run and create csv
         if self.options.get('meas_diam'):
+            output_dir = self.get_output_directory_vessel()
             if self.options.get('use_vessel_weka_segmentation'):
-                output_dir = self.get_output_directory_vessel()
                 output_summary_dir = os.path.join(output_dir, 'Vessel_Segmented', 'Vessel_Analysis', 'Summary')
+            elif self.options.get('use_vessel_threshold'):
+                output_summary_dir = os.path.join(output_dir, 'Vessel_Thresholded', 'Vessel_Analysis', 'Summary')
             else:
-                output_dir = self.get_output_directory_vessel()
                 output_summary_dir = os.path.join(output_dir, 'Vessel_Analysis', 'Summary')
             if not os.path.exists(output_summary_dir):
                 os.makedirs(output_summary_dir)
@@ -463,6 +466,26 @@ class DeviceManager:
                             if self.options.get('show_threshold', False):
                                 thresholded_image.show()
 
+                        # Use thresholded image if option is selected
+                        if self.options.get('use_vessel_threshold'):
+                            # Check if Vessel_Thresholded folder is created
+                            thresholded_folder = os.path.join(os.path.dirname(vessel_image_path), 'Vessel_Thresholded')
+                            if os.path.exists(thresholded_folder):
+                                # Find the corresponding thresholded image
+                                original_filename = os.path.basename(vessel_image_path)
+                                thresholded_filename = os.path.splitext(original_filename)[0] + "_thresholded.tif"
+                                thresholded_image_path = os.path.join(thresholded_folder, thresholded_filename)
+
+                                if os.path.exists(thresholded_image_path):
+                                    self.log("Using thresholded image: {}".format(thresholded_image_path))
+                                    # Create a new instance of device_image and vessel
+                                    device_image = device._load_image(thresholded_image_path, verbose=self.verbose)
+                                    vessel = VesselImage.from_image_plus(device_image, verbose=self.verbose)
+                                else:
+                                    self.log("Warning: Thresholded image not found. Using original image: {}".format(vessel_image_path))
+                            else:
+                                self.log("Warning: Vessel_Thresholded folder not found. Using original image: {}".format(vessel_image_path))
+
                         # Segment the image
                         if self.options.get('vessel_weka'):
                             self.log("Segmenting vessel image: {}".format(vessel_image_path))
@@ -476,7 +499,7 @@ class DeviceManager:
                                 original_filename = os.path.basename(vessel_image_path)
                                 segmented_filename = os.path.splitext(original_filename)[0] + "-Segment.tif"
                                 segmented_image_path = os.path.join(segmented_folder, segmented_filename)
-                                print(segmented_image_path)
+                                #print(segmented_image_path)
 
                                 if os.path.exists(segmented_image_path):
                                     self.log("Using Weka segmented image: {}".format(segmented_image_path))
