@@ -142,8 +142,8 @@ class PerfusionImage(DeviceImage):
         IJ.run("Point Tool...", "type=Hybrid color=Yellow size=Small label")
         dialog = WaitForUserDialog(
             "Add Points",
-            "1. Click to add points for your ROIs.\n" +
-            "2. Hold Shift to add multiple points.\n" +
+            "1. Please select the Multi-point Tool. \n" +
+            "2. Click to add points for your ROIs.\n" +
             "3. Click 'OK' when you're done adding points."
         )
         dialog.show()
