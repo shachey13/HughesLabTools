@@ -320,6 +320,13 @@ class DeviceManager:
         self.walk_directory_and_add_images()  # Always walk the directory
         print("Options:", self.options)
 
+        # Confirm image types first
+        if self.options.get('confirm_image_types'):
+            for device in self.devices:
+                self.log("Confirming image types for device: {}".format(device.name))
+                changer = ImageTypeChangerGui(device)
+                changer.confirm_and_change_image_type()
+
         # if cropping is selected, running cropping before anything else
         # it is faster to run cropping all at once than during each step of a loop
         if self.options.get('crop'):
@@ -425,11 +432,6 @@ class DeviceManager:
 
         # Process each device
         for device in self.devices:
-            # Confirm image types
-            if self.options.get('confirm_image_types'):
-                    self.log("Confirming image types for device: {}".format(device.name))
-                    changer = ImageTypeChangerGui(device)
-                    changer.confirm_and_change_image_type()
 
             # Apply color to images
             if self.options.get("color"):
