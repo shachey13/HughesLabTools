@@ -74,7 +74,7 @@ The Hughes Lab Tools for VMO/VMT Device Image Processing offers a variety of inp
 
 6. Tumor Analysis Options:
    - show_segmented: Display segmented tumor images (boolean).
-   - use_weka_segmentation: Use Weka segmentation for tumors (boolean).
+   - use_weka_segmentation: Use Weka segmentation for tumors (boolean). [Refer to Important Note 1 for more details on running the Weka]
    - rolling_radius: Radius for background subtraction (float).
    - circ_bp: Circularity black point for tumor analysis (float).
    - circ_st: Circularity size threshold (minimum) for tumor analysis (float).
@@ -82,7 +82,7 @@ The Hughes Lab Tools for VMO/VMT Device Image Processing offers a variety of inp
 
 7. Vessel Analysis Options:
    - show_threshold: Display thresholded vessel images (boolean).
-   - use_vessel_weka_segmentation: Use Weka segmentation for vessels (boolean).
+   - use_vessel_weka_segmentation: Use Weka segmentation for vessels (boolean). [Refer to Important Note 1 for more details on running the Weka]
    - hole_threshold: Threshold for hole filling in vessel analysis (float).
    - area_threshold_vessels: Area threshold for vessel analysis (float).
    - image_cleaning_threshold: Threshold for image cleaning in vessel analysis (float).
@@ -95,26 +95,37 @@ The Hughes Lab Tools for VMO/VMT Device Image Processing offers a variety of inp
 8. Perfusion Analysis Options:
    - images_per_n: Number of images per perfusion sequence (float).
    - starting_image: Index of the starting/reference image (float).
-   - perfusion_segment: Perform segmentation for perfusion analysis (boolean).
+   - perfusion_segment: Perform segmentation for perfusion analysis (boolean). 
    - images_per_n_perm: Number of images per permeability sequence (float).
    - manual_align: Enable manual alignment for permeability analysis (boolean).
    - oval_rad: Radius of measurement area for permeability analysis (float).
    - permeability_segment: Perform segmentation for permeability analysis (boolean).
 
-9. Weka Segmentation Options:
+9. Weka Segmentation Options [Refer to Important Note 1 for more details on running the Weka]:
    - use_weka_segmentation_vessels: Use Weka segmentation for vessel diameter measurement or DXF export (boolean).
    - use_weka_segmentation_tumor: Use Weka segmentation for tumor grey level or circularity measurement (boolean).
-
+  
 10. File Processing Options:
    - process_subdirectories: Process images in subdirectories (boolean).
    - confirm_image_types: Prompt user to confirm image types before processing (boolean)
    - verbose: Enable verbose logging for detailed process information (boolean).
 
-**Important Note**: If you rearrange the order of image types with confirm_image_types, it's recommended to avoid using the grouped crop option. For example, if you have two image types (Tumor and Vessels) and change their order to:
+#### Important Notes
+1. Weka Segmentation:
+   For any Weka Segmentation tools, you must first generate a classifier model outside of the HughesLabTools. This process should be done on a single representative image using the Weka Segmentation plugin in ImageJ/Fiji. Once you have trained the classifier and saved the model, you can then use this model file within the HughesLabTools for batch processing.
 
-Tumor, Vessels, Tumor, Tumor, Vessels, Vessels, Tumor, Vessels
+   Steps to generate a Weka classifier model:
+   a. Open a representative image in ImageJ/Fiji.
+   b. Use the Weka Segmentation plugin to train your classifier.
+   c. Save the trained classifier as a .model file.
+   d. When prompted in HughesLabTools, select this .model file for your Weka Segmentation tasks.
 
-The group cropping function may struggle to correctly pair the images. In such cases, consider using individual or batch cropping instead.
+3. Image Type Rearrangement:
+   If you rearrange the order of image types with confirm_image_types, it's recommended to avoid using the grouped crop option. For example, if you have two image types (Tumor and Vessels) and change their order to:
+
+   Tumor, Vessels, Tumor, Tumor, Vessels, Vessels, Tumor, Vessels
+
+   The group cropping function may struggle to correctly pair the images. In such cases, consider using individual or batch cropping instead.
 
 ## Dependencies
 
