@@ -118,7 +118,7 @@ The Hughes Lab Tools for VMO/VMT Device Image Processing offers a variety of inp
    
    i. Open a representative image in ImageJ/Fiji.
    
-   ii. Use the Weka Segmentation plugin to train your classifier.
+   ii. Use the Weka Segmentation plugin to train your classifier. Please assign the foreground to class 1 and the background to class 2 when training your classifier.
    
    iii. Save the trained classifier as a .model file.
    
