@@ -196,7 +196,7 @@ class DeviceImage(ImagePlus):
 
     def create_instruction_dialog(self, is_batch):
         dialog = JDialog(None, "Adjust ROI", False)
-        dialog.setSize(300, 100)
+        dialog.setSize(425, 100)
         dialog.setLayout(FlowLayout())
         dialog.setLocationRelativeTo(None)
         dialog.setAlwaysOnTop(True)
