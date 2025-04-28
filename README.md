@@ -107,7 +107,7 @@ The Hughes Lab Tools for VMO/VMT Device Image Processing offers a variety of inp
   
 10. File Processing Options:
    - process_subdirectories: Process images in subdirectories (boolean).
-   - confirm_image_types: Prompt user to confirm image types before processing (boolean)
+   - confirm_image_types: Prompt user to confirm image types before processing (boolean). [Refer to Important Note 2]
    - verbose: Enable verbose logging for detailed process information (boolean).
 
 #### Important Notes
@@ -115,10 +115,14 @@ The Hughes Lab Tools for VMO/VMT Device Image Processing offers a variety of inp
    For any Weka Segmentation tools, you must first generate a classifier model outside of the HughesLabTools. This process should be done on a single representative image using the Weka Segmentation plugin in ImageJ/Fiji. Once you have trained the classifier and saved the model, you can then use this model file within the HughesLabTools for batch processing.
 
    Steps to generate a Weka classifier model:
-   a. Open a representative image in ImageJ/Fiji.
-   b. Use the Weka Segmentation plugin to train your classifier.
-   c. Save the trained classifier as a .model file.
-   d. When prompted in HughesLabTools, select this .model file for your Weka Segmentation tasks.
+   
+   i. Open a representative image in ImageJ/Fiji.
+   
+   ii. Use the Weka Segmentation plugin to train your classifier.
+   
+   iii. Save the trained classifier as a .model file.
+   
+   iv. When prompted in HughesLabTools, select this .model file for your Weka Segmentation tasks.
 
 3. Image Type Rearrangement:
    If you rearrange the order of image types with confirm_image_types, it's recommended to avoid using the grouped crop option. For example, if you have two image types (Tumor and Vessels) and change their order to:
