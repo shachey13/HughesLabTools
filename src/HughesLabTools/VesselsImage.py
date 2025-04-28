@@ -50,7 +50,7 @@ class VesselImage(DeviceImage):
         IJ.run(imp2, 'Convert to Mask', '')
 
         # create output dir
-        output_dir = self.output_path('thresholded')
+        output_dir = self.output_path('Vessel_Thresholded')
 
         # save file
         output_path = join(output_dir, splitext(self.getTitle())[0] + '_thresholded.jpg')

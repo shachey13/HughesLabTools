@@ -39,7 +39,7 @@ class TumorImage(DeviceImage):
         self.set_measurements()
         results_table = self.analyze_particles(thresholded)
         segmented_image = self.create_segmented_image(thresholded)
-        output_dir = self._output_path('segmented')
+        output_dir = self._output_path('Tumor_Segmented')
         output_path = join(output_dir, splitext(self.getTitle())[0] + '_segmented.jpg')
         output_path_table = join(output_dir, splitext(self.getTitle())[0] + '_results.csv')
         IJ.save(segmented_image, output_path)
