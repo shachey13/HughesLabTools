@@ -346,13 +346,6 @@ class VmoToolsGui:
             panel.add(self.show_segmented_checkbox, c)
             c.gridy += 1
 
-        if self.options['tumor_weka']:
-            c.gridx = 0
-            panel.add(JLabel("Select Weka classifier file:"), c)
-            c.gridx = 1
-            self.use_weka_segmentation_checkbox = JCheckBox()
-            panel.add(self.use_weka_segmentation_checkbox, c)
-            c.gridy += 1
 
         if self.options['subtract_background']:
             c.gridx = 0
@@ -775,7 +768,7 @@ class VmoToolsGui:
         self.confirm_image_types_checkbox = Checkbox('Confirm image types', self.options.get('confirm_image_types', False))
         panel.add(self.confirm_image_types_checkbox)
 
-        self.verbose_logging_checkbox = Checkbox('Verbose Logging', self.options.get('verbose', False))
+        self.verbose_logging_checkbox = Checkbox('Verbose Logging', self.options.get('verbose', True))
         panel.add(self.verbose_logging_checkbox)
 
         # Add the panel to the dialog
@@ -815,7 +808,7 @@ class VmoToolsGui:
         if self.options['segment']:
             self.options['show_segmented'] = self.show_segmented_checkbox.isSelected()
         if self.options['tumor_weka']:
-            self.options['use_weka_segmentation'] = self.use_weka_segmentation_checkbox.isSelected()
+            self.options['use_weka_segmentation'] = True
         if self.options['subtract_background']:
             self.options['rolling_radius'] = float(self.rolling_radius_field.getText())
         if self.options['meas_circ']:
