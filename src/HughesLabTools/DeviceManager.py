@@ -511,6 +511,11 @@ class DeviceManager:
                             else:
                                 self.log("Warning: Vessel_Segmented folder not found. Using original image: {}".format(vessel_image_path))
 
+                        # ensure proper file format before running downstream process
+                        if not vessel._check_image_thresholded():
+                            self.log("Warning: Image {} is not thresholded. Skipping vessel analysis and DXF processing.".format(vessel_image_path))
+                            continue
+
                         # Measure Vessel Diameter
                         if self.options.get('meas_diam'):
                             self.log("Measuring vessel diameter for image: {}".format(vessel_image_path))
