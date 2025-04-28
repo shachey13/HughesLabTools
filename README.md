@@ -9,10 +9,11 @@ The Hughes Lab Tools are designed for processing images captured from VMT (Vascu
 ### Installation
 #### For Unix-based systems (macOS, Linux):
 
-1. Download the `hugheslabtools_install.sh` script.
-2. Open a terminal and navigate to the directory containing the script.
-3. Make the script executable: `chmod +x hugheslabtools_install.sh`
-4. Run the script: `./hugheslabtools_install.sh`
+1. On the GitHub repository page, click the green "Code" button and select "Download ZIP".
+2. Unzip the downloaded file to a temporary location.
+3. Open a terminal and navigate to the directory containing the `hugheslabtools_install.sh` script.
+4. Make the script executable: `chmod +x hugheslabtools_install.sh`
+5. Run the script: `hugheslabtools_install.sh`
 
    **Note:** You may need to modify the `FIJI_DIR` variable in the script to match your Fiji installation directory. By default, it is set to `/Applications/Fiji.app`. Edit this line in the script if your Fiji is installed elsewhere:
 
@@ -20,7 +21,7 @@ The Hughes Lab Tools are designed for processing images captured from VMT (Vascu
 FIJI_DIR="/Applications/Fiji.app"
 ```
 
-#### For Windows:
+#### For Windows/Manual:
 
 1. On the GitHub repository page, click the green "Code" button and select "Download ZIP".
 2. Unzip the downloaded file to a temporary location.
@@ -45,7 +46,7 @@ $FIJI_DIR = "C:\Program Files\Fiji.app"
 Note: You may need to adjust your PowerShell execution policy to run scripts. You can do this by running `Set-ExecutionPolicy RemoteSigned` in an administrator PowerShell window. You also need to have git installed.
 ### Explanation of Inputs
 
-The Hughes Lab Tools for VMT Device Image Processing offers a variety of inputs and options to customize the image processing workflow. Here's an explanation of the main inputs:
+The Hughes Lab Tools for VMO/VMT Device Image Processing offers a variety of inputs and options to customize the image processing workflow. Here's an explanation of the main inputs:
 
 1. Number of Image Types:
    - Allows you to specify how many different types of images you're processing (e.g., Tumor, Vessel, Perfusion).
@@ -67,7 +68,7 @@ The Hughes Lab Tools for VMT Device Image Processing offers a variety of inputs 
 5. Cropping Options:
    - crop_type: Method of cropping ('batch', 'grouped', or 'individual').
      * 'batch': Apply the same crop coordinates to all images.
-     * 'grouped': Apply teh same crop coordinates to groups of images (e.g. all images from one devie)
+     * 'grouped': Apply the same crop coordinates to groups of images (e.g. all images from one device)
      * 'individual': Crop each image individually
    - use_crop: Whether to use cropped images in subsequent processing (boolean).
 
@@ -106,8 +107,14 @@ The Hughes Lab Tools for VMT Device Image Processing offers a variety of inputs 
 
 10. File Processing Options:
    - process_subdirectories: Process images in subdirectories (boolean).
-   - confirm_image_types: Prompt user to confirm image types before processing (boolean).
+   - confirm_image_types: Prompt user to confirm image types before processing (boolean)
    - verbose: Enable verbose logging for detailed process information (boolean).
+
+**Important Note**: If you rearrange the order of image types with confirm_image_types, it's recommended to avoid using the grouped crop option. For example, if you have two image types (Tumor and Vessels) and change their order to:
+
+Tumor, Vessels, Tumor, Tumor, Vessels, Vessels, Tumor, Vessels
+
+The group cropping function may struggle to correctly pair the images. In such cases, consider using individual or batch cropping instead.
 
 ## Dependencies
 
