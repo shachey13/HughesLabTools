@@ -201,7 +201,7 @@ class DeviceImage(ImagePlus):
         dialog.setLocationRelativeTo(None)
         dialog.setAlwaysOnTop(True)
 
-        label = JLabel("Adjust the rectangle ROI in the ImageJ window and click OK to continue.")
+        label = JLabel("Draw an ROI using the Rectangle Tool and click OK to continue.")
         dialog.add(label)
 
         ok_button = JButton("OK")
