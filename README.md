@@ -89,13 +89,13 @@ The Hughes Lab Tools for VMO/VMT Device Image Processing offers a variety of inp
    - distance_threshold: Distance threshold for vessel analysis (float).
    - mean_threshold: Mean intensity threshold for vessel analysis (float).
    - vessel_settings: Show settings for each vessel image (boolean).
-   - smooth_bool: Enable smoothing for DXF export (boolean).
+   - smooth_bool: Enable smoothing for DXF export (boolean). [Refer to Important Note 2]
    - smooth_value: Smoothing value for DXF export (float).
 
 8. Perfusion Analysis Options:
    - images_per_n: Number of images per perfusion sequence (float).
    - starting_image: Index of the starting/reference image (float).
-   - perfusion_segment: Perform segmentation for perfusion analysis (boolean). [Refer to Important Note 2]
+   - perfusion_segment: Perform segmentation for perfusion analysis (boolean). [Refer to Important Note 3]
    - images_per_n_perm: Number of images per permeability sequence (float).
    - manual_align: Enable manual alignment for permeability analysis (boolean).
    - oval_rad: Radius of measurement area for permeability analysis (float).
@@ -107,7 +107,7 @@ The Hughes Lab Tools for VMO/VMT Device Image Processing offers a variety of inp
   
 10. File Processing Options:
    - process_subdirectories: Process images in subdirectories (boolean).
-   - confirm_image_types: Prompt user to confirm image types before processing (boolean). [Refer to Important Note 3]
+   - confirm_image_types: Prompt user to confirm image types before processing (boolean). [Refer to Important Note 4]
    - verbose: Enable verbose logging for detailed process information (boolean).
 
 #### Important Notes
@@ -124,10 +124,13 @@ The Hughes Lab Tools for VMO/VMT Device Image Processing offers a variety of inp
    
    iv. When prompted in HughesLabTools, select this .model file for your Weka Segmentation tasks.
 
-2. Perfusion Calculation:
+2. DXF Output:
+   The DXF Output traces regoins of interest (ROIs) as part of the processing step. This usually runs headless; however, if an image file is shown on the screen, it will repeatedly map the ROIs on the current image during the analysis. This does not impact the downstream process and can be ignored.
+   
+4. Perfusion Calculation:
    The perfusion calculation uses an image as the background to subtract baseline values. Therefore, at least two images per sequence must be provided.
 
-4.  Image Type Rearrangement:
+5.  Image Type Rearrangement:
    If you rearrange the order of image types with confirm_image_types, it's recommended to avoid using the grouped crop option. For example, if you have two image types (Tumor and Vessels) and change their order to:
 
    Tumor, Vessels, Tumor, Tumor, Vessels, Vessels, Tumor, Vessels
