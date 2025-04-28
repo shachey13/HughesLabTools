@@ -139,7 +139,7 @@ class DeviceManager:
          """
 
         if formats is None:
-            formats = ['tif', 'tiff']
+            formats = ['tif', 'tiff', 'png']
 
         # Gather all image files
         image_files = []
@@ -150,11 +150,13 @@ class DeviceManager:
 
             # Skip directories named 'colored' or 'merged'
             skip_dirs = [
-                'crop',                # Output from cropping
+                'crop',                   # Output from cropping
+                'Vessel_Thresholded'      # Output from vessel thresholding
                 'Vessel_Segmented',       # Output from vessel segmentation
                 'Vessel_Analysis',        # Output from vessel analysis
                 'DXF',                    # Output DXF files
                 'Tumor_Segmented',        # Output from tumor segmentation
+                'Tumor_Segmented_Weka'    # Output from tumor segmentation with Weka
                 'subtracted',             # Background subtracted images
                 'measure_gray',           # Tumor gray level measurements
                 'circularity',            # Tumor circularity measurements
@@ -274,7 +276,7 @@ class DeviceManager:
         return self._get_output_directory(['crop', 'Vessel_Segmented'])
 
     def get_output_directory_tumor(self):
-        return self._get_output_directory(['crop', 'Tumor_Segmented', 'subtracted'])
+        return self._get_output_directory(['crop', 'Tumor_Segmented_Weka', 'subtracted'])
 
     def _get_output_directory(self, possible_subdirs):
         current_path = self.rootDir
@@ -292,7 +294,7 @@ class DeviceManager:
             return self.options.get('use_crop')
         elif subdir == 'Vessel_Segmented':
             return self.options.get('use_weka_segmentation_vessel')
-        elif subdir == 'Tumor_Segmented':
+        elif subdir == 'Tumor_Segmented_Weka':
             return self.options.get('use_weka_segmentation_tumor')
         elif subdir == 'subtracted':
             return self.options.get('subtract_background')
@@ -524,12 +526,12 @@ class DeviceManager:
                         # Segment the image
                         if self.options.get('tumor_weka'):
                             self.log("Segmenting tumor image: {}".format(tumor_image_path))
-                            device_image.segment_image(self.options.get('tumor_weka_classifier'), 'Tumor_Segmented')
+                            device_image.segment_image(self.options.get('tumor_weka_classifier'), 'Tumor_Segmented_Weka')
 
                         # change path if using the segmented tumor
                         if self.options.get('use_weka_segmentation_tumor'):
                             # Check if Vessel_Segmented folder is created
-                            segmented_folder = os.path.join(os.path.dirname(tumor_image_path), 'Tumor_Segmented')
+                            segmented_folder = os.path.join(os.path.dirname(tumor_image_path), 'Tumor_Segmented_Weka')
                             if os.path.exists(segmented_folder):
                                 # Find the corresponding segmented image
                                 original_filename = os.path.basename(tumor_image_path)
