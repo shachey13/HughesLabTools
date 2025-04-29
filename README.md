@@ -9,10 +9,11 @@ The Hughes Lab Tools are designed for processing images captured from VMT (Vascu
 ### Installation
 #### For Unix-based systems (macOS, Linux):
 
-1. Download the `hugheslabtools_install.sh` script.
-2. Open a terminal and navigate to the directory containing the script.
-3. Make the script executable: `chmod +x hugheslabtools_install.sh`
-4. Run the script: `./hugheslabtools_install.sh`
+1. On the GitHub repository page, click the green "Code" button and select "Download ZIP".
+2. Unzip the downloaded file to a temporary location.
+3. Open a terminal and navigate to the directory containing the `hugheslabtools_install.sh` script.
+4. Make the script executable: `chmod +x hugheslabtools_install.sh`
+5. Run the script: `hugheslabtools_install.sh`
 
    **Note:** You may need to modify the `FIJI_DIR` variable in the script to match your Fiji installation directory. By default, it is set to `/Applications/Fiji.app`. Edit this line in the script if your Fiji is installed elsewhere:
 
@@ -20,15 +21,15 @@ The Hughes Lab Tools are designed for processing images captured from VMT (Vascu
 FIJI_DIR="/Applications/Fiji.app"
 ```
 
-#### For Windows:
+#### For Windows/Manual:
 
 1. On the GitHub repository page, click the green "Code" button and select "Download ZIP".
 2. Unzip the downloaded file to a temporary location.
 3. Navigate to your FIJI installation directory on your computer.
 4. In the FIJI directory, create a new folder called "Lib" inside the "jars" folder if it doesn't already exist.
-5. Copy the contents of the unzipped "HughesLabTools" folder into the "Lib" folder you just created.
+5. In the HughesLabTools-main, go to the src folder and then copy the contents of the "HughesLabTools" folder into the "Lib" folder you just created.
 6. In the FIJI main directory, navigate to the "scripts" folder. If it doesn't exist, create it.
-7. Copy the contents of the unzipped "HughesLabTools" folder into the "scripts" folder.
+7. Go to the "HughesLabTools" folder from step 5 and copy the "main_.py" file. Paste the file into the "scripts" folder.
    
 ##### For advanced Windows Users:
 1. Download the `hugheslabtools_install_windows.ps1` script.
@@ -45,7 +46,7 @@ $FIJI_DIR = "C:\Program Files\Fiji.app"
 Note: You may need to adjust your PowerShell execution policy to run scripts. You can do this by running `Set-ExecutionPolicy RemoteSigned` in an administrator PowerShell window. You also need to have git installed.
 ### Explanation of Inputs
 
-The Hughes Lab Tools for VMT Device Image Processing offers a variety of inputs and options to customize the image processing workflow. Here's an explanation of the main inputs:
+The Hughes Lab Tools for VMO/VMT Device Image Processing offers a variety of inputs and options to customize the image processing workflow. Here's an explanation of the main inputs:
 
 1. Number of Image Types:
    - Allows you to specify how many different types of images you're processing (e.g., Tumor, Vessel, Perfusion).
@@ -67,13 +68,13 @@ The Hughes Lab Tools for VMT Device Image Processing offers a variety of inputs 
 5. Cropping Options:
    - crop_type: Method of cropping ('batch', 'grouped', or 'individual').
      * 'batch': Apply the same crop coordinates to all images.
-     * 'grouped': Apply teh same crop coordinates to groups of images (e.g. all images from one devie)
+     * 'grouped': Apply the same crop coordinates to groups of images (e.g. all images from one device)
      * 'individual': Crop each image individually
    - use_crop: Whether to use cropped images in subsequent processing (boolean).
 
 6. Tumor Analysis Options:
    - show_segmented: Display segmented tumor images (boolean).
-   - use_weka_segmentation: Use Weka segmentation for tumors (boolean).
+   - use_weka_segmentation: Use Weka segmentation for tumors (boolean). [Refer to Important Note 1 for more details on running the Weka]
    - rolling_radius: Radius for background subtraction (float).
    - circ_bp: Circularity black point for tumor analysis (float).
    - circ_st: Circularity size threshold (minimum) for tumor analysis (float).
@@ -81,33 +82,60 @@ The Hughes Lab Tools for VMT Device Image Processing offers a variety of inputs 
 
 7. Vessel Analysis Options:
    - show_threshold: Display thresholded vessel images (boolean).
-   - use_vessel_weka_segmentation: Use Weka segmentation for vessels (boolean).
+   - use_vessel_weka_segmentation: Use Weka segmentation for vessels (boolean). [Refer to Important Note 1 for more details on running the Weka]
    - hole_threshold: Threshold for hole filling in vessel analysis (float).
    - area_threshold_vessels: Area threshold for vessel analysis (float).
    - image_cleaning_threshold: Threshold for image cleaning in vessel analysis (float).
    - distance_threshold: Distance threshold for vessel analysis (float).
    - mean_threshold: Mean intensity threshold for vessel analysis (float).
    - vessel_settings: Show settings for each vessel image (boolean).
-   - smooth_bool: Enable smoothing for DXF export (boolean).
+   - smooth_bool: Enable smoothing for DXF export (boolean). [Refer to Important Note 2]
    - smooth_value: Smoothing value for DXF export (float).
 
 8. Perfusion Analysis Options:
    - images_per_n: Number of images per perfusion sequence (float).
    - starting_image: Index of the starting/reference image (float).
-   - perfusion_segment: Perform segmentation for perfusion analysis (boolean).
+   - perfusion_segment: Perform segmentation for perfusion analysis (boolean). [Refer to Important Note 3]
    - images_per_n_perm: Number of images per permeability sequence (float).
    - manual_align: Enable manual alignment for permeability analysis (boolean).
    - oval_rad: Radius of measurement area for permeability analysis (float).
    - permeability_segment: Perform segmentation for permeability analysis (boolean).
 
-9. Weka Segmentation Options:
+9. Weka Segmentation Options [Refer to Important Note 1 for more details on running the Weka]:
    - use_weka_segmentation_vessels: Use Weka segmentation for vessel diameter measurement or DXF export (boolean).
    - use_weka_segmentation_tumor: Use Weka segmentation for tumor grey level or circularity measurement (boolean).
-
+  
 10. File Processing Options:
    - process_subdirectories: Process images in subdirectories (boolean).
-   - confirm_image_types: Prompt user to confirm image types before processing (boolean).
+   - confirm_image_types: Prompt user to confirm image types before processing (boolean). [Refer to Important Note 4]
    - verbose: Enable verbose logging for detailed process information (boolean).
+
+#### Important Notes
+1. Weka Segmentation:
+   For any Weka Segmentation tools, you must first generate a classifier model outside of the HughesLabTools. This process should be done on a single representative image using the Weka Segmentation plugin in ImageJ/Fiji. Once you have trained the classifier and saved the model, you can then use this model file within the HughesLabTools for batch processing.
+
+   Steps to generate a Weka classifier model:
+   
+   i. Open a representative image in ImageJ/Fiji.
+   
+   ii. Use the Weka Segmentation plugin to train your classifier. Please assign the foreground to class 1 and the background to class 2 when training your classifier.
+   
+   iii. Save the trained classifier as a .model file.
+   
+   iv. When prompted in HughesLabTools, select this .model file for your Weka Segmentation tasks.
+
+2. DXF Output:
+   The DXF Output traces regoins of interest (ROIs) as part of the processing step. This usually runs headless; however, if an image file is shown on the screen, it will repeatedly map the ROIs on the current image during the analysis. This does not impact the downstream process and can be ignored.
+   
+4. Perfusion Calculation:
+   The perfusion calculation uses an image as the background to subtract baseline values. Therefore, at least two images per sequence must be provided.
+
+5.  Image Type Rearrangement:
+   If you rearrange the order of image types with confirm_image_types, it's recommended to avoid using the grouped crop option. For example, if you have two image types (Tumor and Vessels) and change their order to:
+
+   Tumor, Vessels, Tumor, Tumor, Vessels, Vessels, Tumor, Vessels
+
+   The group cropping function may struggle to correctly pair the images. In such cases, consider using individual or batch cropping instead.
 
 ## Dependencies
 

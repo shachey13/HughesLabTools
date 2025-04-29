@@ -145,7 +145,7 @@ class VmoToolsGui:
         """
         dialog = gui.GenericDialog('Run VMO Tools')
         radio_buttons = ['Color and Merge Images', 'Color Images', 'No Coloring']
-        dialog.addRadioButtonGroup('Image Coloring Tools:', radio_buttons, 3, 1, radio_buttons[0])
+        dialog.addRadioButtonGroup('Image Coloring Tools:', radio_buttons, 3, 1, radio_buttons[2])
 
         # Cropping section
         dialog.setInsets(15, 10, 0)
@@ -346,13 +346,6 @@ class VmoToolsGui:
             panel.add(self.show_segmented_checkbox, c)
             c.gridy += 1
 
-        if self.options['tumor_weka']:
-            c.gridx = 0
-            panel.add(JLabel("Select Weka classifier file:"), c)
-            c.gridx = 1
-            self.use_weka_segmentation_checkbox = JCheckBox()
-            panel.add(self.use_weka_segmentation_checkbox, c)
-            c.gridy += 1
 
         if self.options['subtract_background']:
             c.gridx = 0
@@ -445,13 +438,13 @@ class VmoToolsGui:
             panel.add(self.show_threshold_checkbox, c)
             c.gridy += 1
 
-        if self.options['vessel_weka']:
-            c.gridx = 0
-            panel.add(JLabel("Select Weka Vessel classifier file:"), c)
-            c.gridx = 1
-            self.use_vessel_weka_checkbox = JCheckBox()
-            panel.add(self.use_vessel_weka_checkbox, c)
-            c.gridy += 1
+        #if self.options['vessel_weka']:
+        #    c.gridx = 0
+        #    panel.add(JLabel("Select Weka Vessel classifier file:"), c)
+        #    c.gridx = 1
+        #    self.use_vessel_weka_checkbox = JCheckBox()
+        #    panel.add(self.use_vessel_weka_checkbox, c)
+        #    c.gridy += 1
 
         if self.options['meas_diam']:
             c.gridx = 0
@@ -513,12 +506,14 @@ class VmoToolsGui:
             panel.add(self.smooth_value_field, c)
             c.gridy += 1
 
-        if self.options['meas_diam'] or self.options['dxf_out']:
+        if self.options['vessel_weka'] and self.options['threshold'] and (self.options['meas_diam'] or self.options['dxf_out']):
             c.gridx = 0
-            panel.add(JLabel("Use Weka Segmentation for Vessels:"), c)
+            panel.add(JLabel("Select downstream processing:"), c)
             c.gridx = 1
-            self.use_weka_segmentation_vessels_checkbox = JCheckBox()
-            panel.add(self.use_weka_segmentation_vessels_checkbox, c)
+            self.vessel_downstream_choice = Choice()
+            self.vessel_downstream_choice.add("Thresholded")
+            self.vessel_downstream_choice.add("Weka Segmented")
+            panel.add(self.vessel_downstream_choice, c)
             c.gridy += 1
 
         return wrapper_panel
@@ -773,7 +768,7 @@ class VmoToolsGui:
         self.confirm_image_types_checkbox = Checkbox('Confirm image types', self.options.get('confirm_image_types', False))
         panel.add(self.confirm_image_types_checkbox)
 
-        self.verbose_logging_checkbox = Checkbox('Verbose Logging', self.options.get('verbose', False))
+        self.verbose_logging_checkbox = Checkbox('Verbose Logging', self.options.get('verbose', True))
         panel.add(self.verbose_logging_checkbox)
 
         # Add the panel to the dialog
@@ -813,7 +808,7 @@ class VmoToolsGui:
         if self.options['segment']:
             self.options['show_segmented'] = self.show_segmented_checkbox.isSelected()
         if self.options['tumor_weka']:
-            self.options['use_weka_segmentation'] = self.use_weka_segmentation_checkbox.isSelected()
+            self.options['use_weka_segmentation'] = True
         if self.options['subtract_background']:
             self.options['rolling_radius'] = float(self.rolling_radius_field.getText())
         if self.options['meas_circ']:
@@ -824,8 +819,15 @@ class VmoToolsGui:
         # Process vessel options
         if self.options['threshold']:
             self.options['show_threshold'] = self.show_threshold_checkbox.isSelected()
+            self.options['use_vessel_threshold'] = True
         if self.options['vessel_weka']:
-            self.options['use_vessel_weka_segmentation'] = self.use_vessel_weka_checkbox.isSelected()
+            self.options['use_vessel_weka_segmentation'] = True
+            self.options['use_weka_segmentation_vessels'] = True
+            #self.options['use_vessel_weka_segmentation'] = self.use_vessel_weka_checkbox.isSelected()
+        if self.options['vessel_weka'] and self.options['threshold'] and (self.options['meas_diam'] or self.options['dxf_out']):
+            downstream_choice = self.vessel_downstream_choice.getSelectedItem()
+            self.options['use_vessel_threshold'] = (downstream_choice == "Thresholded")
+            self.options['use_weka_segmentation_vessels'] = (downstream_choice == "Weka Segmented")
         if self.options['meas_diam']:
             self.options['hole_threshold'] = float(self.hole_threshold_field.getText())
             self.options['area_threshold_vessels'] = float(self.area_threshold_field.getText())
@@ -849,8 +851,8 @@ class VmoToolsGui:
             self.options['permeability_segment'] = self.permeability_segment_checkbox.isSelected()
 
         # handle weka
-        if self.options['meas_diam'] or self.options['dxf_out']:
-            self.options['use_weka_segmentation_vessels'] = self.use_weka_segmentation_vessels_checkbox.isSelected()
+        #if self.options['meas_diam'] or self.options['dxf_out']:
+            #self.options['use_weka_segmentation_vessels'] = self.use_weka_segmentation_vessels_checkbox.isSelected()
         if self.options['meas_grey'] or self.options['meas_circ']:
             self.options['use_weka_segmentation_tumor'] = self.use_weka_segmentation_tumor_checkbox.isSelected()
 

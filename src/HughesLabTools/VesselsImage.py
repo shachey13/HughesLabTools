@@ -50,11 +50,11 @@ class VesselImage(DeviceImage):
         IJ.run(imp2, 'Convert to Mask', '')
 
         # create output dir
-        output_dir = self.output_path('thresholded')
+        output_dir = self.output_path('Vessel_Thresholded')
 
         # save file
-        output_path = join(output_dir, splitext(self.getTitle())[0] + '_thresholded.jpg')
-        IJ.save(imp2, output_path)
+        output_path = join(output_dir, splitext(self.getTitle())[0] + '_thresholded.tif')
+        FileSaver(imp2).saveAsTiff(output_path)
 
         # Verbose logging
         if device_manager.verbose:
@@ -142,7 +142,7 @@ class VesselImage(DeviceImage):
             output_dir = self.output_path('dxf')
 
         output_dxf_path = join(output_dir, splitext(self.getTitle())[0] + '.dxf')
-        print(output_dxf_path)
+        #print(output_dxf_path)
         fid = self.dxf_open(output_dxf_path)
         for i in range(rm.getCount()):
             roi = rm.getRoi(i)
@@ -746,3 +746,18 @@ class VesselImage(DeviceImage):
         with open(file_path, 'ab') as f:
             writer = csv.writer(f)
             writer.writerow(row_data)
+
+
+    def _check_image_thresholded(self):
+        """
+        Check if the image is 8-bit and thresholded (binary).
+        """
+        if self.getType() != ImagePlus.GRAY8:
+            return False
+
+        ip = self.getProcessor()
+        min_value = ip.getMin()
+        max_value = ip.getMax()
+
+        # Check if the image is binary (only contains 0 and 255)
+        return min_value == 0 and max_value == 255

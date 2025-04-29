@@ -139,7 +139,7 @@ class DeviceManager:
          """
 
         if formats is None:
-            formats = ['tif', 'tiff']
+            formats = ['tif', 'tiff', 'png']
 
         # Gather all image files
         image_files = []
@@ -150,11 +150,13 @@ class DeviceManager:
 
             # Skip directories named 'colored' or 'merged'
             skip_dirs = [
-                'crop',                # Output from cropping
+                'crop',                   # Output from cropping
+                'Vessel_Thresholded'      # Output from vessel thresholding
                 'Vessel_Segmented',       # Output from vessel segmentation
                 'Vessel_Analysis',        # Output from vessel analysis
                 'DXF',                    # Output DXF files
                 'Tumor_Segmented',        # Output from tumor segmentation
+                'Tumor_Segmented_Weka'    # Output from tumor segmentation with Weka
                 'subtracted',             # Background subtracted images
                 'measure_gray',           # Tumor gray level measurements
                 'circularity',            # Tumor circularity measurements
@@ -271,10 +273,10 @@ class DeviceManager:
         return ext in formats
 
     def get_output_directory_vessel(self):
-        return self._get_output_directory(['crop', 'Vessel_Segmented'])
+        return self._get_output_directory(['crop', 'Vessel_Segmented', 'Vessel_Thresholded'])
 
     def get_output_directory_tumor(self):
-        return self._get_output_directory(['crop', 'Tumor_Segmented', 'subtracted'])
+        return self._get_output_directory(['crop', 'Tumor_Segmented_Weka', 'subtracted'])
 
     def _get_output_directory(self, possible_subdirs):
         current_path = self.rootDir
@@ -292,7 +294,9 @@ class DeviceManager:
             return self.options.get('use_crop')
         elif subdir == 'Vessel_Segmented':
             return self.options.get('use_weka_segmentation_vessel')
-        elif subdir == 'Tumor_Segmented':
+        elif subdir == 'Vessel_Thresholded':
+            return self.options.get('use_vessel_thresholded')
+        elif subdir == 'Tumor_Segmented_Weka':
             return self.options.get('use_weka_segmentation_tumor')
         elif subdir == 'subtracted':
             return self.options.get('subtract_background')
@@ -315,6 +319,13 @@ class DeviceManager:
          """
         self.walk_directory_and_add_images()  # Always walk the directory
         print("Options:", self.options)
+
+        # Confirm image types first
+        if self.options.get('confirm_image_types'):
+            for device in self.devices:
+                self.log("Confirming image types for device: {}".format(device.name))
+                changer = ImageTypeChangerGui(device)
+                changer.confirm_and_change_image_type()
 
         # if cropping is selected, running cropping before anything else
         # it is faster to run cropping all at once than during each step of a loop
@@ -392,11 +403,12 @@ class DeviceManager:
 
         # check if diameter measurements are to be run and create csv
         if self.options.get('meas_diam'):
+            output_dir = self.get_output_directory_vessel()
             if self.options.get('use_vessel_weka_segmentation'):
-                output_dir = self.get_output_directory_vessel()
                 output_summary_dir = os.path.join(output_dir, 'Vessel_Segmented', 'Vessel_Analysis', 'Summary')
+            elif self.options.get('use_vessel_threshold'):
+                output_summary_dir = os.path.join(output_dir, 'Vessel_Thresholded', 'Vessel_Analysis', 'Summary')
             else:
-                output_dir = self.get_output_directory_vessel()
                 output_summary_dir = os.path.join(output_dir, 'Vessel_Analysis', 'Summary')
             if not os.path.exists(output_summary_dir):
                 os.makedirs(output_summary_dir)
@@ -420,11 +432,6 @@ class DeviceManager:
 
         # Process each device
         for device in self.devices:
-            # Confirm image types
-            if self.options.get('confirm_image_types'):
-                    self.log("Confirming image types for device: {}".format(device.name))
-                    changer = ImageTypeChangerGui(device)
-                    changer.confirm_and_change_image_type()
 
             # Apply color to images
             if self.options.get("color"):
@@ -461,6 +468,26 @@ class DeviceManager:
                             if self.options.get('show_threshold', False):
                                 thresholded_image.show()
 
+                        # Use thresholded image if option is selected
+                        if self.options.get('use_vessel_threshold'):
+                            # Check if Vessel_Thresholded folder is created
+                            thresholded_folder = os.path.join(os.path.dirname(vessel_image_path), 'Vessel_Thresholded')
+                            if os.path.exists(thresholded_folder):
+                                # Find the corresponding thresholded image
+                                original_filename = os.path.basename(vessel_image_path)
+                                thresholded_filename = os.path.splitext(original_filename)[0] + "_thresholded.tif"
+                                thresholded_image_path = os.path.join(thresholded_folder, thresholded_filename)
+
+                                if os.path.exists(thresholded_image_path):
+                                    self.log("Using thresholded image: {}".format(thresholded_image_path))
+                                    # Create a new instance of device_image and vessel
+                                    device_image = device._load_image(thresholded_image_path, verbose=self.verbose)
+                                    vessel = VesselImage.from_image_plus(device_image, verbose=self.verbose)
+                                else:
+                                    self.log("Warning: Thresholded image not found. Using original image: {}".format(vessel_image_path))
+                            else:
+                                self.log("Warning: Vessel_Thresholded folder not found. Using original image: {}".format(vessel_image_path))
+
                         # Segment the image
                         if self.options.get('vessel_weka'):
                             self.log("Segmenting vessel image: {}".format(vessel_image_path))
@@ -474,7 +501,7 @@ class DeviceManager:
                                 original_filename = os.path.basename(vessel_image_path)
                                 segmented_filename = os.path.splitext(original_filename)[0] + "-Segment.tif"
                                 segmented_image_path = os.path.join(segmented_folder, segmented_filename)
-                                print(segmented_image_path)
+                                #print(segmented_image_path)
 
                                 if os.path.exists(segmented_image_path):
                                     self.log("Using Weka segmented image: {}".format(segmented_image_path))
@@ -485,6 +512,11 @@ class DeviceManager:
                                     self.log("Warning: Segmented image not found. Using original image: {}".format(vessel_image_path))
                             else:
                                 self.log("Warning: Vessel_Segmented folder not found. Using original image: {}".format(vessel_image_path))
+
+                        # ensure proper file format before running downstream process
+                        if not vessel._check_image_thresholded():
+                            self.log("Warning: Image {} is not thresholded. Skipping vessel analysis and DXF processing.".format(vessel_image_path))
+                            continue
 
                         # Measure Vessel Diameter
                         if self.options.get('meas_diam'):
@@ -524,12 +556,12 @@ class DeviceManager:
                         # Segment the image
                         if self.options.get('tumor_weka'):
                             self.log("Segmenting tumor image: {}".format(tumor_image_path))
-                            device_image.segment_image(self.options.get('tumor_weka_classifier'), 'Tumor_Segmented')
+                            device_image.segment_image(self.options.get('tumor_weka_classifier'), 'Tumor_Segmented_Weka')
 
                         # change path if using the segmented tumor
                         if self.options.get('use_weka_segmentation_tumor'):
                             # Check if Vessel_Segmented folder is created
-                            segmented_folder = os.path.join(os.path.dirname(tumor_image_path), 'Tumor_Segmented')
+                            segmented_folder = os.path.join(os.path.dirname(tumor_image_path), 'Tumor_Segmented_Weka')
                             if os.path.exists(segmented_folder):
                                 # Find the corresponding segmented image
                                 original_filename = os.path.basename(tumor_image_path)
